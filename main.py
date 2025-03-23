@@ -358,10 +358,12 @@ def main():
     # Intervalles de spawn des obstacles selon la vitesse (modifiés pour être plus rapprochés)
     # Format: [min_interval, max_interval] en millisecondes
     obstacle_intervals = {
-        6: [800, 1400],  # Vitesse 6: réduit de [1000, 1800] à [800, 1400]
-        7: [900, 1600],  # Vitesse 7: réduit de [1300, 2500] à [800, 1600]
-        8: [1100, 1800],  # Vitesse 8: réduit de [1500, 3000] à [900, 1800]
-        9: [1300, 2000]   # Vitesse 9: réduit de [1500, 3000] à [1000, 2000]
+        6: [800, 1400],  # Vitesse 6
+        7: [900, 1600],  # Vitesse 7
+        8: [1100, 1800],  # Vitesse 8
+        9: [1300, 2000],  # Vitesse 9
+        10: [1400, 2100], # Vitesse 10 - légèrement plus long que la vitesse 9
+        11: [1500, 2200]  # Vitesse 11 - légèrement plus long que la vitesse 10
     }
     
     # Intervalle initial
@@ -385,6 +387,12 @@ def main():
     min_threshold_9 = max(40, 2 * speed_threshold_8 - 15)
     max_threshold_9 = 2 * speed_threshold_8 + 5
     speed_threshold_9 = random.randint(min_threshold_9, max_threshold_9)
+    
+    # Nouveau seuil pour vitesse aléatoire (100)
+    speed_threshold_random = 100
+    
+    # Prochain seuil pour le changement de vitesse aléatoire
+    next_random_change = speed_threshold_random + random.randint(25, 50)
     
     # Boucle de jeu
     running = True
@@ -422,6 +430,15 @@ def main():
                     obj = Obstacle(WIDTH)
                 else:  # 50% pour un bloc
                     obj = Block(WIDTH)
+            elif current_speed == 7:
+                # Vitesse 7: distribution originale
+                choice = random.random()
+                if choice < 0.5:  # 50% pour un obstacle simple
+                    obj = Obstacle(WIDTH)
+                elif choice < 0.8:  # 30% pour un bloc
+                    obj = Block(WIDTH)
+                else:  # 20% pour une structure de double pics
+                    obj = DoublePikes(WIDTH)
             elif current_speed == 8:
                 # Vitesse 8: 20% pic, 20% bloc, 30% doublepic, 30% nouvelle structure
                 choice = random.random()
@@ -436,9 +453,9 @@ def main():
             elif current_speed == 9:
                 # Vitesse 9: 8% pic, 8% bloc, 20% doublepic, 30% nouvelle structure, 30% triple pics, 4% quadruple pics
                 choice = random.random()
-                if choice < 0.08:  # 8% pour un obstacle simple (réduit de 10% à 8%)
+                if choice < 0.08:  # 8% pour un obstacle simple
                     obj = Obstacle(WIDTH)
-                elif choice < 0.16:  # 8% pour un bloc (réduit de 10% à 8%)
+                elif choice < 0.16:  # 8% pour un bloc
                     obj = Block(WIDTH)
                 elif choice < 0.36:  # 20% pour un double pic
                     obj = DoublePikes(WIDTH)
@@ -448,15 +465,17 @@ def main():
                     obj = TriplePikes(WIDTH)
                 else:  # 4% pour les quadruples pics
                     obj = QuadruplePikes(WIDTH)
-            else:
-                # Aux autres vitesses: distribution originale sans la nouvelle structure
+            elif current_speed >= 10:
+                # Vitesses 10 et 11: pas de pic seul ni de bloc seul, distribution similaire à 9
                 choice = random.random()
-                if choice < 0.5:  # 50% de chance pour un obstacle simple
-                    obj = Obstacle(WIDTH)
-                elif choice < 0.8:  # 30% de chance pour un bloc
-                    obj = Block(WIDTH)
-                else:  # 20% de chance pour une structure de double pics
+                if choice < 0.25:  # 25% pour un double pic (augmenté)
                     obj = DoublePikes(WIDTH)
+                elif choice < 0.60:  # 35% pour la nouvelle structure (augmenté)
+                    obj = BlockGapBlockWithSpike(WIDTH)
+                elif choice < 0.95:  # 35% pour les triples pics (augmenté)
+                    obj = TriplePikes(WIDTH)
+                else:  # 5% pour les quadruples pics (légèrement augmenté)
+                    obj = QuadruplePikes(WIDTH)
                 
             # Définir la vitesse actuelle pour le nouvel objet
             obj.set_speed(current_speed)
@@ -522,22 +541,49 @@ def main():
                 game_objects.remove(obj)
                 score += 1
                 
-                # Vérifier si le score a atteint les paliers pour augmenter la vitesse
-                if score == speed_threshold_7 and current_speed < 7:
-                    current_speed = 7
+                # Vérifier si le score a atteint les paliers pour la progression standard des vitesses
+                if score < speed_threshold_random:  # Uniquement avant d'atteindre le seuil pour vitesse aléatoire
+                    if score == speed_threshold_7 and current_speed < 7:
+                        current_speed = 7
+                        print(f"Passage à la vitesse 7 à {score} points!")
+                        # Mettre à jour la vitesse de tous les objets existants
+                        for game_obj in game_objects:
+                            game_obj.set_speed(current_speed)
+                    elif score == speed_threshold_8 and current_speed < 8:
+                        current_speed = 8
+                        print(f"Passage à la vitesse 8 à {score} points!")
+                        # Mettre à jour la vitesse de tous les objets existants
+                        for game_obj in game_objects:
+                            game_obj.set_speed(current_speed)
+                    elif score == speed_threshold_9 and current_speed < 9:
+                        current_speed = 9
+                        print(f"Passage à la vitesse 9 à {score} points!")
+                        # Mettre à jour la vitesse de tous les objets existants
+                        for game_obj in game_objects:
+                            game_obj.set_speed(current_speed)
+                # Vérifier les seuils pour la vitesse aléatoire
+                elif score == speed_threshold_random:
+                    # Premier changement aléatoire à 100 points
+                    new_speed = random.randint(9, 11)
+                    current_speed = new_speed
+                    print(f"Passage à la vitesse aléatoire {new_speed} à {score} points!")
                     # Mettre à jour la vitesse de tous les objets existants
                     for game_obj in game_objects:
                         game_obj.set_speed(current_speed)
-                elif score == speed_threshold_8 and current_speed < 8:
-                    current_speed = 8
+                    # Définir le prochain seuil
+                    next_random_change = score + random.randint(25, 50)
+                    print(f"Prochain changement à {next_random_change} points")
+                elif score >= speed_threshold_random and score == next_random_change:
+                    # Changements aléatoires subséquents
+                    new_speed = random.randint(9, 11)
+                    current_speed = new_speed
+                    print(f"Nouveau changement à la vitesse aléatoire {new_speed} à {score} points!")
                     # Mettre à jour la vitesse de tous les objets existants
                     for game_obj in game_objects:
                         game_obj.set_speed(current_speed)
-                elif score == speed_threshold_9 and current_speed < 9:
-                    current_speed = 9
-                    # Mettre à jour la vitesse de tous les objets existants
-                    for game_obj in game_objects:
-                        game_obj.set_speed(current_speed)
+                    # Définir le prochain seuil
+                    next_random_change = score + random.randint(25, 50)
+                    print(f"Prochain changement à {next_random_change} points")
         
         # Dessiner l'arrière-plan
         screen.fill(WHITE)
@@ -560,6 +606,11 @@ def main():
         # Afficher la vitesse actuelle
         speed_text = font.render(f"Vitesse: {current_speed}", True, BLACK)
         screen.blit(speed_text, (20, 60))
+
+        # Afficher le prochain changement de vitesse si la partie est avancée
+        if score >= speed_threshold_random:
+            next_change_text = font.render(f"Prochain changement à: {next_random_change}", True, BLACK)
+            screen.blit(next_change_text, (20, 100))
         
         # Mettre à jour l'écran
         pygame.display.flip()
@@ -572,4 +623,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-                   
