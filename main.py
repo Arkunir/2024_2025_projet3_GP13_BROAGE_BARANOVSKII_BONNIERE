@@ -427,7 +427,7 @@ def ai_test_play():
         needs_to_jump = False
         
         # Distance d'anticipation ajustée selon la vitesse de défilement
-        jump_distance = 180 + (current_speed - 6) * 20  # Base 180 + ajustement selon vitesse
+        jump_distance = 220 + (current_speed - 6) * 30  # Augmenté pour détecter plus tôt
         
         # Position du prochain obstacle ou pic nécessitant un saut
         next_obstacle_x = float('inf')
@@ -445,8 +445,8 @@ def ai_test_play():
             elif isinstance(obj, QuadruplePikes):
                 obstacle_positions.append(obj.x)
             elif isinstance(obj, Block):
-                # Ne rien faire, on peut marcher sur un bloc simple
-                pass
+                # Utiliser rect.x au lieu de x pour les blocs
+                obstacle_positions.append(obj.rect.x)
             elif isinstance(obj, BlockGapBlockWithSpike):
                 # Premier bloc
                 obstacle_positions.append(obj.x)
@@ -468,8 +468,8 @@ def ai_test_play():
         # Faire sauter l'IA au bon moment si nécessaire
         if needs_to_jump and not player.is_jumping:
             # Calculer le meilleur moment pour sauter
-            # Ce timing est crucial pour franchir correctement les obstacles
-            optimal_jump_distance = 30 + (current_speed * 10)  # Ajusté selon la vitesse
+            # Timing ajusté pour franchir correctement les obstacles
+            optimal_jump_distance = (current_speed * 15) - 30  # Augmenté pour sauter plus tôt
             
             if next_obstacle_x - player.rect.right <= optimal_jump_distance:
                 player.jump()
