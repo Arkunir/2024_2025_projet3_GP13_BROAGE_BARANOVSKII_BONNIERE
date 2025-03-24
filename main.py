@@ -381,6 +381,7 @@ class Button:
         return self.rect.collidepoint(mouse_pos) and mouse_clicked
 
 # Fonction pour l'IA de test qui joue parfaitement
+# Fonction pour l'IA de test qui joue parfaitement
 def ai_test_play():
     player = Player()
     game_objects = []
@@ -421,35 +422,53 @@ def ai_test_play():
                 pygame.quit()
                 sys.exit()
                 
-        # Logique de l'IA de test
+        # Logique de l'IA de test améliorée
         # Vérifier s'il y a des obstacles à venir et sauter si nécessaire
-        # L'IA regarde en avant pour décider quand sauter
         needs_to_jump = False
-        jump_distance = 150  # Distance à laquelle l'IA détecte un obstacle
+        
+        # Distance d'anticipation ajustée selon la vitesse de défilement
+        jump_distance = 180 + (current_speed - 6) * 20  # Base 180 + ajustement selon vitesse
+        
+        # Position du prochain obstacle ou pic nécessitant un saut
+        next_obstacle_x = float('inf')
         
         for obj in game_objects:
-            # Pour les obstacles et pics
-            if isinstance(obj, Obstacle) or isinstance(obj, DoublePikes) or isinstance(obj, TriplePikes) or isinstance(obj, QuadruplePikes):
-                if hasattr(obj, 'x'):
-                    # S'il y a un obstacle proche, sauter
-                    if obj.x - player.rect.right < jump_distance and obj.x > player.rect.left:
-                        needs_to_jump = True
-                        break
-            # Pour la structure spéciale
+            # Récupérer la position X de l'obstacle selon son type
+            obstacle_positions = []
+            
+            if isinstance(obj, Obstacle):
+                obstacle_positions.append(obj.x)
+            elif isinstance(obj, DoublePikes):
+                obstacle_positions.append(obj.x)
+            elif isinstance(obj, TriplePikes):
+                obstacle_positions.append(obj.x)
+            elif isinstance(obj, QuadruplePikes):
+                obstacle_positions.append(obj.x)
+            elif isinstance(obj, Block):
+                obstacle_positions.append(obj.x)  # Maintenant, l'IA prend en compte les blocs simples
             elif isinstance(obj, BlockGapBlockWithSpike):
-                if obj.x - player.rect.right < jump_distance and obj.x > player.rect.left:
-                    # Si on est près du premier bloc, sauter
-                    needs_to_jump = True
-                    break
-                # Pour le deuxième bloc avec pic
-                elif obj.x + CUBE_SIZE * 3 - player.rect.right < jump_distance and obj.x + CUBE_SIZE * 3 > player.rect.left:
-                    needs_to_jump = True
-                    break
+                # Premier bloc
+                obstacle_positions.append(obj.x)
+                # Deuxième bloc avec pic
+                obstacle_positions.append(obj.x + CUBE_SIZE * 3)
+
+            # Vérifier chaque position pour décider de sauter
+            for pos in obstacle_positions:
+                # Calculer la distance entre le joueur et l'obstacle
+                distance = pos - player.rect.right
+                
+                # Si l'obstacle est dans la zone de détection et devant le joueur
+                if 0 < distance < jump_distance:
+                    # Mettre à jour la position du prochain obstacle si c'est le plus proche
+                    if pos < next_obstacle_x:
+                        next_obstacle_x = pos
+                        needs_to_jump = True
         
-        # Faire sauter l'IA si nécessaire
+        # Faire sauter l'IA au bon moment si nécessaire
         if needs_to_jump and not player.is_jumping:
-            player.jump()
-        
+            if next_obstacle_x - player.rect.right <= 30 + (current_speed * 10):  # Délai ajusté
+                player.jump()
+
         # Même logique que le jeu principal pour l'ajout d'obstacles
         if current_time - last_object > object_interval:
             # Choisir le type d'obstacle selon la vitesse
