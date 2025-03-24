@@ -16,10 +16,13 @@ Conditions d'exécution : Assurez-vous d'avoir **Python installé** sur votre ma
 ### Status:  
 
 Travail à faire:
+- Implémenté l'IA
+- train l'ia
 
 
 Travail en cour:
-
+- corps du jeu
+- menu
 
 Travail fini:
 

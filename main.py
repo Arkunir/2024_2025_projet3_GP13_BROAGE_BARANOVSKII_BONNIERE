@@ -445,13 +445,14 @@ def ai_test_play():
             elif isinstance(obj, QuadruplePikes):
                 obstacle_positions.append(obj.x)
             elif isinstance(obj, Block):
-                obstacle_positions.append(obj.x)  # Maintenant, l'IA prend en compte les blocs simples
+                # Ne rien faire, on peut marcher sur un bloc simple
+                pass
             elif isinstance(obj, BlockGapBlockWithSpike):
                 # Premier bloc
                 obstacle_positions.append(obj.x)
                 # Deuxième bloc avec pic
                 obstacle_positions.append(obj.x + CUBE_SIZE * 3)
-
+            
             # Vérifier chaque position pour décider de sauter
             for pos in obstacle_positions:
                 # Calculer la distance entre le joueur et l'obstacle
@@ -466,9 +467,13 @@ def ai_test_play():
         
         # Faire sauter l'IA au bon moment si nécessaire
         if needs_to_jump and not player.is_jumping:
-            if next_obstacle_x - player.rect.right <= 30 + (current_speed * 10):  # Délai ajusté
+            # Calculer le meilleur moment pour sauter
+            # Ce timing est crucial pour franchir correctement les obstacles
+            optimal_jump_distance = 30 + (current_speed * 10)  # Ajusté selon la vitesse
+            
+            if next_obstacle_x - player.rect.right <= optimal_jump_distance:
                 player.jump()
-
+        
         # Même logique que le jeu principal pour l'ajout d'obstacles
         if current_time - last_object > object_interval:
             # Choisir le type d'obstacle selon la vitesse
