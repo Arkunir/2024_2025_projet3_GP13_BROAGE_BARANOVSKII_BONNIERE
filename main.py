@@ -381,7 +381,6 @@ class Button:
         return self.rect.collidepoint(mouse_pos) and mouse_clicked
 
 # Fonction pour l'IA de test qui joue parfaitement
-# Fonction pour l'IA de test qui joue parfaitement
 def ai_test_play():
     player = Player()
     game_objects = []
@@ -412,6 +411,9 @@ def ai_test_play():
     speed_threshold_random = 100
     next_random_change = speed_threshold_random + random.randint(25, 50)
     
+    # Nouvelle variable pour suivre le second saut
+    second_jump_required = False
+    
     running = True
     while running:
         current_time = pygame.time.get_ticks()
@@ -422,58 +424,126 @@ def ai_test_play():
                 pygame.quit()
                 sys.exit()
                 
-        # Logique de l'IA de test améliorée
-        # Vérifier s'il y a des obstacles à venir et sauter si nécessaire
+        # Logique de l'IA de test améliorée avec adaptation précise
         needs_to_jump = False
         
-        # Distance d'anticipation ajustée selon la vitesse de défilement
-        jump_distance = 220 + (current_speed - 6) * 30  # Augmenté pour détecter plus tôt
+        # Paramètres de saut spécifiques à chaque vitesse et type d'obstacle
+        jump_params = {
+            6: {
+                "Obstacle": {"detection": 20, "jump_timing": 12},
+                "Block": {"detection": 22, "jump_timing": 22}
+            },
+            7: {
+                "Obstacle": {"detection": 22, "jump_timing": 13},
+                "Block": {"detection": 24, "jump_timing": 26},
+                "DoublePikes": {"detection": 25, "jump_timing": 10}
+            },
+            8: {
+                "Obstacle": {"detection": 24, "jump_timing": 14},
+                "Block": {"detection": 26, "jump_timing": 29},
+                "DoublePikes": {"detection": 27, "jump_timing": 10},
+                "BlockGapBlockWithSpike": {"detection": 28, "jump_timing": 29}
+            },
+            9: {
+                "Obstacle": {"detection": 26, "jump_timing": 15},
+                "Block": {"detection": 28, "jump_timing": 16},
+                "DoublePikes": {"detection": 29, "jump_timing": 18},
+                "BlockGapBlockWithSpike": {"detection": 30, "jump_timing": 19},
+                "TriplePikes": {"detection": 32, "jump_timing": 21}
+            },
+            10: {
+                "DoublePikes": {"detection": 31, "jump_timing": 19},
+                "BlockGapBlockWithSpike": {"detection": 32, "jump_timing": 20},
+                "TriplePikes": {"detection": 34, "jump_timing": 22}
+            },
+            11: {
+                "DoublePikes": {"detection": 33, "jump_timing": 20},
+                "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 21},
+                "TriplePikes": {"detection": 36, "jump_timing": 23},
+                "QuadruplePikes": {"detection": 38, "jump_timing": 25}
+            }
+        }
         
-        # Position du prochain obstacle ou pic nécessitant un saut
+        base_detection_distance = 200
         next_obstacle_x = float('inf')
+        next_obstacle_type = None
         
         for obj in game_objects:
-            # Récupérer la position X de l'obstacle selon son type
-            obstacle_positions = []
+            obstacle_info = []
             
             if isinstance(obj, Obstacle):
-                obstacle_positions.append(obj.x)
-            elif isinstance(obj, DoublePikes):
-                obstacle_positions.append(obj.x)
-            elif isinstance(obj, TriplePikes):
-                obstacle_positions.append(obj.x)
-            elif isinstance(obj, QuadruplePikes):
-                obstacle_positions.append(obj.x)
+                obstacle_info.append((obj.x, "Obstacle"))
             elif isinstance(obj, Block):
-                # Utiliser rect.x au lieu de x pour les blocs
-                obstacle_positions.append(obj.rect.x)
+                obstacle_info.append((obj.rect.x, "Block"))
+            elif isinstance(obj, DoublePikes):
+                obstacle_info.append((obj.x, "DoublePikes"))
+            elif isinstance(obj, TriplePikes):
+                obstacle_info.append((obj.x, "TriplePikes"))
+            elif isinstance(obj, QuadruplePikes):
+                obstacle_info.append((obj.x, "QuadruplePikes"))
             elif isinstance(obj, BlockGapBlockWithSpike):
-                # Premier bloc
-                obstacle_positions.append(obj.x)
-                # Deuxième bloc avec pic
-                obstacle_positions.append(obj.x + CUBE_SIZE * 3)
+                obstacle_info.append((obj.x, "BlockGapBlockWithSpike"))
             
-            # Vérifier chaque position pour décider de sauter
-            for pos in obstacle_positions:
+            for pos, obj_type in obstacle_info:
+                # Récupérer les paramètres de saut spécifiques
+                speed_params = jump_params.get(current_speed, {})
+                obstacle_params = speed_params.get(obj_type, {})
+                
+                if obstacle_params:
+                    detection_multiplier = obstacle_params.get("detection", 20)
+                    jump_timing_multiplier = obstacle_params.get("jump_timing", 12)
+                else:
+                    # Valeurs par défaut si pas de paramètres spécifiques
+                    detection_multiplier = 20
+                    jump_timing_multiplier = 12
+                
+                detection_distance = base_detection_distance + (current_speed * detection_multiplier)
+                
                 # Calculer la distance entre le joueur et l'obstacle
                 distance = pos - player.rect.right
                 
                 # Si l'obstacle est dans la zone de détection et devant le joueur
-                if 0 < distance < jump_distance:
+                if 0 < distance < detection_distance:
                     # Mettre à jour la position du prochain obstacle si c'est le plus proche
                     if pos < next_obstacle_x:
                         next_obstacle_x = pos
+                        next_obstacle_type = obj_type
                         needs_to_jump = True
         
-        # Faire sauter l'IA au bon moment si nécessaire
-        if needs_to_jump and not player.is_jumping:
-            # Calculer le meilleur moment pour sauter
-            # Timing ajusté pour franchir correctement les obstacles
-            optimal_jump_distance = (current_speed * 15) - 30  # Augmenté pour sauter plus tôt
-            
-            if next_obstacle_x - player.rect.right <= optimal_jump_distance:
-                player.jump()
+            # Faire sauter l'IA au bon moment si nécessaire
+            if needs_to_jump and not player.is_jumping:
+                # Récupérer les paramètres de saut spécifiques
+                speed_params = jump_params.get(current_speed, {})
+    
+                obstacle_params = speed_params.get(next_obstacle_type, {})
+    
+                if obstacle_params:
+                    jump_timing_multiplier = obstacle_params.get("jump_timing", 15)
+                else:
+                    jump_timing_multiplier = 15
+    
+                optimal_jump_distance = current_speed * jump_timing_multiplier
+    
+                # Décision de saut
+                if next_obstacle_x - player.rect.right <= optimal_jump_distance:
+                    player.jump()
         
+                    # Gestion du second saut pour BlockGapBlockWithSpike
+                    if next_obstacle_type == "BlockGapBlockWithSpike":
+                        # Utiliser le flag just_landed pour le second saut
+                        def check_second_jump():
+                            if player.just_landed:
+                                player.jump()
+                                return True
+                            return False
+            
+                        # Programmer un rappel pour le second saut
+                        pygame.time.set_timer(pygame.USEREVENT, 100)  # Événement toutes les 100 ms
+                        for event in pygame.event.get():
+                            if event.type == pygame.USEREVENT:
+                                if check_second_jump():
+                                    pygame.time.set_timer(pygame.USEREVENT, 0)  # Arrêter le timer
+
         # Même logique que le jeu principal pour l'ajout d'obstacles
         if current_time - last_object > object_interval:
             # Choisir le type d'obstacle selon la vitesse
