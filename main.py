@@ -2,65 +2,50 @@ import pygame
 import sys
 import random
 
-# Initialisation de Pygame
 pygame.init()
 
-# Constantes
 WIDTH, HEIGHT = 800, 600
 FPS = 60
 GRAVITY = 1
 JUMP_STRENGTH = -18
 GROUND_HEIGHT = 500
 CUBE_SIZE = 50
-INITIAL_SCROLL_SPEED = 6  # Vitesse initiale à 6
+INITIAL_SCROLL_SPEED = 6
 
-# Couleurs
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 
-# Création de la fenêtre
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash Clone")
 clock = pygame.time.Clock()
 
-# Classe Joueur
 class Player:
     def __init__(self):
         self.rect = pygame.Rect(100, GROUND_HEIGHT - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         self.velocity_y = 0
         self.is_jumping = False
         self.is_alive = True
-        self.standing_on = None  # Le bloc sur lequel le joueur se tient
-        # Nouvelle variable pour détecter quand le joueur vient juste d'atterrir
+        self.standing_on = None
         self.just_landed = False
 
     def update(self, game_objects):
-        # Sauvegarder l'état de saut avant mise à jour
         was_jumping = self.is_jumping
         
-        # Appliquer la gravité
         self.velocity_y += GRAVITY
         
-        # Sauvegarder la position précédente pour la détection de collision
         old_y = self.rect.y
         
-        # Mettre à jour la position verticale
         self.rect.y += self.velocity_y
         
-        # Réinitialiser l'objet sur lequel le joueur se tient
         self.standing_on = None
         
-        # Par défaut, on n'a pas juste atterri
         self.just_landed = False
         
-        # Vérifier les collisions avec les objets du jeu
         for obj in game_objects:
-            # Collisions avec les blocs normaux
             if isinstance(obj, Block):
-                # Collision avec le dessus du bloc
                 if (old_y + CUBE_SIZE <= obj.rect.top and 
                     self.rect.y + CUBE_SIZE >= obj.rect.top and
                     self.rect.right > obj.rect.left and
@@ -69,33 +54,26 @@ class Player:
                     self.rect.bottom = obj.rect.top
                     self.velocity_y = 0
                     
-                    # Si on était en train de sauter et maintenant on ne l'est plus
                     if self.is_jumping:
                         self.just_landed = True
                     
                     self.is_jumping = False
                     self.standing_on = obj
                     
-                # Collision latérale avec le bloc
                 elif (self.rect.colliderect(obj.rect) and 
                       not (old_y + CUBE_SIZE <= obj.rect.top)):
                     self.is_alive = False
                     print("Game Over! Collision latérale avec un bloc")
                     
-            # Collisions avec la structure spéciale (bloc-espace-bloc+pic)
             elif isinstance(obj, BlockGapBlockWithSpike):
-                # Récupérer les rectangles des blocs (sans le pic)         
                 bloc_rects = [obj.get_rects()[0], obj.get_rects()[1]]
                 pic_rect = obj.get_rects()[2]
                 
-                # Vérifier la collision avec le pic
                 if self.rect.colliderect(pic_rect):
                     self.is_alive = False
                     print("Game Over! Collision avec un pic")
                 
-                # Vérifier les collisions avec les blocs
                 for bloc_rect in bloc_rects:
-                    # Collision avec le dessus du bloc
                     if (old_y + CUBE_SIZE <= bloc_rect.top and 
                         self.rect.y + CUBE_SIZE >= bloc_rect.top and
                         self.rect.right > bloc_rect.left and
@@ -104,25 +82,21 @@ class Player:
                         self.rect.bottom = bloc_rect.top
                         self.velocity_y = 0
                         
-                        # Si on était en train de sauter et maintenant on ne l'est plus
                         if self.is_jumping:
                             self.just_landed = True
                         
                         self.is_jumping = False
                         self.standing_on = obj
                         
-                    # Collision latérale avec le bloc
                     elif (self.rect.colliderect(bloc_rect) and 
                           not (old_y + CUBE_SIZE <= bloc_rect.top)):
                         self.is_alive = False
                         print("Game Over! Collision latérale avec un bloc de la structure")
         
-        # Vérifier si le joueur touche le sol
         if self.rect.y >= GROUND_HEIGHT - CUBE_SIZE and not self.standing_on:
             self.rect.y = GROUND_HEIGHT - CUBE_SIZE
             self.velocity_y = 0
             
-            # Si on était en train de sauter et maintenant on ne l'est plus
             if self.is_jumping:
                 self.just_landed = True
             
@@ -136,7 +110,6 @@ class Player:
     def draw(self):
         pygame.draw.rect(screen, BLUE, self.rect)
 
-# Classe de base pour les objets en mouvement
 class MovingObject:
     def __init__(self, x):
         self.scroll_speed = INITIAL_SCROLL_SPEED
@@ -144,7 +117,6 @@ class MovingObject:
     def set_speed(self, speed):
         self.scroll_speed = speed
 
-# Classe Obstacle (Triangle rouge - dangereux)
 class Obstacle(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -157,18 +129,15 @@ class Obstacle(MovingObject):
         self.x -= self.scroll_speed
         
     def draw(self):
-        # Dessiner un triangle rouge
         pygame.draw.polygon(screen, RED, [
-            (self.x, self.y + self.height),  # Bas gauche
-            (self.x + self.width, self.y + self.height),  # Bas droite
-            (self.x + self.width/2, self.y)  # Sommet
+            (self.x, self.y + self.height),
+            (self.x + self.width, self.y + self.height),
+            (self.x + self.width/2, self.y)
         ])
         
     def get_rect(self):
-        # Créer un rectangle pour la détection de collision
         return pygame.Rect(self.x, self.y, self.width, self.height)
 
-# Classe pour une structure avec deux pics consécutifs
 class DoublePikes(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -181,29 +150,24 @@ class DoublePikes(MovingObject):
         self.x -= self.scroll_speed
         
     def draw(self):
-        # Dessiner deux triangles rouges consécutifs
-        # Premier pic
         pygame.draw.polygon(screen, RED, [
-            (self.x, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE/2, self.y)  # Sommet
+            (self.x, self.y + self.height),
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE/2, self.y)
         ])
         
-        # Deuxième pic
         pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE*2, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE*1.5, self.y)  # Sommet
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*1.5, self.y)
         ])
         
     def get_rects(self):
-        # Créer deux rectangles pour la détection de collision
         return [
             pygame.Rect(self.x, self.y, CUBE_SIZE, self.height),
             pygame.Rect(self.x + CUBE_SIZE, self.y, CUBE_SIZE, self.height)
         ]
 
-# Classe pour une structure avec trois pics consécutifs
 class TriplePikes(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -216,37 +180,31 @@ class TriplePikes(MovingObject):
         self.x -= self.scroll_speed
         
     def draw(self):
-        # Dessiner trois triangles rouges consécutifs
-        # Premier pic
         pygame.draw.polygon(screen, RED, [
-            (self.x, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE/2, self.y)  # Sommet
+            (self.x, self.y + self.height),
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE/2, self.y)
         ])
         
-        # Deuxième pic
         pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE*2, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE*1.5, self.y)  # Sommet
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*1.5, self.y)
         ])
         
-        # Troisième pic
         pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE*2, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE*3, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE*2.5, self.y)  # Sommet
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*3, self.y + self.height),
+            (self.x + CUBE_SIZE*2.5, self.y)
         ])
         
     def get_rects(self):
-        # Créer trois rectangles pour la détection de collision
         return [
             pygame.Rect(self.x, self.y, CUBE_SIZE, self.height),
             pygame.Rect(self.x + CUBE_SIZE, self.y, CUBE_SIZE, self.height),
             pygame.Rect(self.x + CUBE_SIZE*2, self.y, CUBE_SIZE, self.height)
         ]
 
-# Nouvelle classe pour une structure avec quatre pics consécutifs
 class QuadruplePikes(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -259,37 +217,31 @@ class QuadruplePikes(MovingObject):
         self.x -= self.scroll_speed
         
     def draw(self):
-        # Dessiner quatre triangles rouges consécutifs
-        # Premier pic
         pygame.draw.polygon(screen, RED, [
-            (self.x, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE/2, self.y)  # Sommet
+            (self.x, self.y + self.height),
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE/2, self.y)
         ])
         
-        # Deuxième pic
         pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE*2, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE*1.5, self.y)  # Sommet
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*1.5, self.y)
         ])
         
-        # Troisième pic
         pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE*2, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE*3, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE*2.5, self.y)  # Sommet
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*3, self.y + self.height),
+            (self.x + CUBE_SIZE*2.5, self.y)
         ])
         
-        # Quatrième pic
         pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE*3, self.y + self.height),  # Bas gauche
-            (self.x + CUBE_SIZE*4, self.y + self.height),  # Bas droite
-            (self.x + CUBE_SIZE*3.5, self.y)  # Sommet
+            (self.x + CUBE_SIZE*3, self.y + self.height),
+            (self.x + CUBE_SIZE*4, self.y + self.height),
+            (self.x + CUBE_SIZE*3.5, self.y)
         ])
         
     def get_rects(self):
-        # Créer quatre rectangles pour la détection de collision
         return [
             pygame.Rect(self.x, self.y, CUBE_SIZE, self.height),
             pygame.Rect(self.x + CUBE_SIZE, self.y, CUBE_SIZE, self.height),
@@ -297,7 +249,6 @@ class QuadruplePikes(MovingObject):
             pygame.Rect(self.x + CUBE_SIZE*3, self.y, CUBE_SIZE, self.height)
         ]
 
-# Classe Block (Blocs noirs - inoffensifs si touchés par le dessus)
 class Block(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -314,42 +265,32 @@ class BlockGapBlockWithSpike(MovingObject):
         super().__init__(x)
         self.x = x
         self.y = GROUND_HEIGHT - CUBE_SIZE
-        # Structure de 3 éléments: bloc, espace élargi (2 cubes), bloc+pic
-        self.width = CUBE_SIZE * 4  # Augmenté de 3 à 4 pour tenir compte de l'espace supplémentaire
+        self.width = CUBE_SIZE * 4
         self.height = CUBE_SIZE
         
     def update(self):
         self.x -= self.scroll_speed
         
     def draw(self):
-        # Premier bloc
         pygame.draw.rect(screen, BLACK, pygame.Rect(
             self.x, self.y, CUBE_SIZE, CUBE_SIZE))
         
-        # Deuxième bloc (à droite avec un espace de 2 cubes entre les deux)
         pygame.draw.rect(screen, BLACK, pygame.Rect(
-            self.x + CUBE_SIZE * 3, self.y, CUBE_SIZE, CUBE_SIZE))  # Position modifiée de 2 à 3
+            self.x + CUBE_SIZE * 3, self.y, CUBE_SIZE, CUBE_SIZE))
         
-        # Pic sur le deuxième bloc
         pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE * 3, self.y),  # Position modifiée de 2 à 3
-            (self.x + CUBE_SIZE * 4, self.y),  # Position modifiée de 3 à 4
-            (self.x + CUBE_SIZE * 3.5, self.y - CUBE_SIZE)  # Position modifiée de 2.5 à 3.5
+            (self.x + CUBE_SIZE * 3, self.y),
+            (self.x + CUBE_SIZE * 4, self.y),
+            (self.x + CUBE_SIZE * 3.5, self.y - CUBE_SIZE)
         ])
         
     def get_rects(self):
-        # Créer trois rectangles pour la détection de collision
         return [
-            # Premier bloc
             pygame.Rect(self.x, self.y, CUBE_SIZE, self.height),
-            # Deuxième bloc
-            pygame.Rect(self.x + CUBE_SIZE * 3, self.y, CUBE_SIZE, self.height),  # Position modifiée de 2 à 3
-            # Pic sur le deuxième bloc
-            pygame.Rect(self.x + CUBE_SIZE * 3, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)  # Position modifiée de 2 à 3
+            pygame.Rect(self.x + CUBE_SIZE * 3, self.y, CUBE_SIZE, self.height),
+            pygame.Rect(self.x + CUBE_SIZE * 3, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         ]
-# Ajouter ce code avant la fonction main() actuelle
 
-# Classe pour les boutons du menu
 class Button:
     def __init__(self, text, x, y, width, height, color, hover_color):
         self.text = text
@@ -359,28 +300,22 @@ class Button:
         self.is_hovered = False
         
     def draw(self, surface):
-        # Changer la couleur si le bouton est survolé
         current_color = self.hover_color if self.is_hovered else self.color
         
-        # Dessiner le bouton
         pygame.draw.rect(surface, current_color, self.rect)
-        pygame.draw.rect(surface, BLACK, self.rect, 2)  # Bordure
+        pygame.draw.rect(surface, BLACK, self.rect, 2)
         
-        # Dessiner le texte
         font = pygame.font.SysFont(None, 30)
         text_surface = font.render(self.text, True, BLACK)
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
         
     def update(self, mouse_pos):
-        # Vérifier si la souris est sur le bouton
         self.is_hovered = self.rect.collidepoint(mouse_pos)
         
     def check_clicked(self, mouse_pos, mouse_clicked):
-        # Vérifier si le bouton a été cliqué
         return self.rect.collidepoint(mouse_pos) and mouse_clicked
-
-# Fonction pour l'IA de test qui joue parfaitement
+    
 def ai_test_play():
     player = Player()
     game_objects = []
