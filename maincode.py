@@ -1,7 +1,7 @@
 import pygame
 import sys
 import random
-from testiacode import ai_test_play
+from main import show_menu
 pygame.init()
 
 WIDTH, HEIGHT = 800, 600
@@ -16,7 +16,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
-GREEN = (0, 255, 0)
+GREEN = (0, 255, 0) 
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash Clone")
@@ -535,65 +535,5 @@ def main():
         pygame.display.flip()
          
         clock.tick(FPS)
-    
     show_menu()
-
-def show_menu():
-    button_color = (200, 200, 200)
-    hover_color = (150, 150, 150)
     
-    button_width, button_height = 200, 50
-    start_x = WIDTH // 2 - button_width // 2
-    
-    player_button = Button("Joueur", start_x, 200, button_width, button_height, button_color, hover_color)
-    ai_reinforcement_button = Button("IA par Renforcement", start_x, 280, button_width, button_height, button_color, hover_color)
-    ai_test_button = Button("IA Test", start_x, 360, button_width, button_height, button_color, hover_color)
-    
-    menu_running = True
-    while menu_running:
-        screen.fill(WHITE)
-        
-        font_title = pygame.font.SysFont(None, 60)
-        title_text = font_title.render("Geometry Dash Clone", True, BLACK)
-        title_rect = title_text.get_rect(center=(WIDTH // 2, 100))
-        screen.blit(title_text, title_rect)
-        
-        mouse_pos = pygame.mouse.get_pos()
-        mouse_clicked = False
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    mouse_clicked = True
-        
-        player_button.update(mouse_pos)
-        ai_reinforcement_button.update(mouse_pos)
-        ai_test_button.update(mouse_pos)
-        
-        player_button.draw(screen)
-        ai_reinforcement_button.draw(screen)
-        ai_test_button.draw(screen)
-        
-        if player_button.check_clicked(mouse_pos, mouse_clicked):
-            menu_running = False
-            main()
-        elif ai_reinforcement_button.check_clicked(mouse_pos, mouse_clicked):
-            font = pygame.font.SysFont(None, 24)
-            info_text = font.render("Fonctionnalité non implémentée", True, RED)
-            screen.blit(info_text, (WIDTH // 2 - 120, 450))
-            pygame.display.flip()
-            pygame.time.wait(1000)
-        elif ai_test_button.check_clicked(mouse_pos, mouse_clicked):
-            menu_running = False
-            ai_test_play()
-            show_menu()
-        
-        pygame.display.flip()
-        clock.tick(30)
-
-if __name__ == "__main__":
-    show_menu()    
-    pygame.quit()
