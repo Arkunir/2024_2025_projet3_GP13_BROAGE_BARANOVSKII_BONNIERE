@@ -606,7 +606,7 @@ def main():
         clock.tick(FPS)
     
     show_menu()
-
+    show_menu()
 def show_menu():
     button_color = (200, 200, 200)
     hover_color = (150, 150, 150)
