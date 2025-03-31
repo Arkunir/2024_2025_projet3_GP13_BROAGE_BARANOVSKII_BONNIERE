@@ -16,7 +16,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
-GREEN = (0, 255, 0)
+GREEN = (0, 255, 0) 
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash Clone")
@@ -295,6 +295,53 @@ class BlockGapBlockWithSpike(MovingObject):
             pygame.Rect(self.x + CUBE_SIZE * 3, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         ]
 
+class BackOnTrackObstacle(MovingObject):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+        self.y = GROUND_HEIGHT - CUBE_SIZE * 2
+        self.width = CUBE_SIZE * 4
+        self.height = CUBE_SIZE
+        
+    def update(self):
+        self.x -= self.scroll_speed
+        
+    def draw(self):
+        # Ceiling spikes
+        for i in range(4):
+            pygame.draw.polygon(screen, RED, [
+                (self.x + i * CUBE_SIZE, self.y),
+                (self.x + i * CUBE_SIZE + CUBE_SIZE, self.y),
+                (self.x + i * CUBE_SIZE + CUBE_SIZE/2, self.y - CUBE_SIZE)
+            ])
+        
+        # Three yellow pads
+        for i in range(3):
+            pygame.draw.rect(screen, (255, 255, 0), pygame.Rect(
+                self.x + i * CUBE_SIZE + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2))
+        
+    def get_rects(self):
+        return [
+            # Ceiling spikes rects
+            pygame.Rect(self.x, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
+            pygame.Rect(self.x + CUBE_SIZE, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
+            pygame.Rect(self.x + CUBE_SIZE * 2, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
+            pygame.Rect(self.x + CUBE_SIZE * 3, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
+            # Pads rects
+            pygame.Rect(self.x + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
+            pygame.Rect(self.x + CUBE_SIZE + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
+            pygame.Rect(self.x + CUBE_SIZE * 2 + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2)
+        ]
+
+    def activate_pads(self, player):
+        if player.standing_on and player.standing_on in [
+            pygame.Rect(self.x + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
+            pygame.Rect(self.x + CUBE_SIZE + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
+            pygame.Rect(self.x + CUBE_SIZE * 2 + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2)
+        ]:
+            player.velocity_y = -22
+            player.is_jumping = True
+
 class Button:
     def __init__(self, text, x, y, width, height, color, hover_color):
         self.text = text
@@ -349,7 +396,7 @@ def main():
     speed_threshold_8 = random.randint(min_threshold_8, max_threshold_8)
     
     min_threshold_9 = max(40, 2 * speed_threshold_8 - 15)
-    max_threshold_9 = 2 * speed_threshold_8 + 5
+    max_threshold_9 = 2 * speed_threshold_8 + 5             
     speed_threshold_9 = random.randint(min_threshold_9, max_threshold_9)
     
     speed_threshold_random = 100
@@ -379,13 +426,17 @@ def main():
         if current_time - last_object > object_interval:
             if current_speed == 6:
                 choice = random.random()
-                if choice < 0.5:
+                if choice < 0.1:
+                    obj = BackOnTrackObstacle(WIDTH)
+                elif choice < 0.6:
                     obj = Obstacle(WIDTH)
                 else:
                     obj = Block(WIDTH)
             elif current_speed == 7:
                 choice = random.random()
-                if choice < 0.5:
+                if choice < 0.1:
+                    obj = BackOnTrackObstacle(WIDTH)
+                elif choice < 0.6:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.8:
                     obj = Block(WIDTH)
@@ -393,10 +444,10 @@ def main():
                     obj = DoublePikes(WIDTH)
             elif current_speed == 8:
                 choice = random.random()
-                if choice < 0.2:
-                    obj = Obstacle(WIDTH)
+                if choice < 0.1:
+                    obj = BackOnTrackObstacle(WIDTH)
                 elif choice < 0.4:
-                    obj = Block(WIDTH)
+                    obj = Obstacle(WIDTH)
                 elif choice < 0.7:
                     obj = DoublePikes(WIDTH)
                 else:
@@ -417,9 +468,11 @@ def main():
                     obj = QuadruplePikes(WIDTH)
             elif current_speed >= 10:
                 choice = random.random()
-                if choice < 0.25:
+                if choice < 0.2:
+                    obj = BackOnTrackObstacle(WIDTH)
+                elif choice < 0.5:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.60:
+                elif choice < 0.8:
                     obj = BlockGapBlockWithSpike(WIDTH)
                 elif choice < 0.95:
                     obj = TriplePikes(WIDTH)
@@ -445,6 +498,21 @@ def main():
                 player.is_alive = False
                 print("Game Over! Collision avec un obstacle")
                 running = False
+            
+            elif isinstance(obj, BackOnTrackObstacle):
+                for rect in obj.get_rects()[:4]:  # Spike rects
+                    if player.rect.colliderect(rect):
+                        player.is_alive = False
+                        print("Game Over! Collision avec un pic")
+                        running = False
+                        break
+                
+                if not running:
+                    break
+                
+                for pad_rect in obj.get_rects()[4:]:  # Pad rects
+                    if player.rect.colliderect(pad_rect):
+                        obj.activate_pads(player)
             
             elif isinstance(obj, DoublePikes):
                 for rect in obj.get_rects():
@@ -475,7 +543,8 @@ def main():
                 (isinstance(obj, DoublePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, TriplePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, QuadruplePikes) and obj.x + obj.width < 0) or
-                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
+                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0) or
+                (isinstance(obj, BackOnTrackObstacle) and obj.x + obj.width < 0)):
                 game_objects.remove(obj)
                 score += 1
                 
@@ -537,7 +606,7 @@ def main():
         clock.tick(FPS)
     
     show_menu()
-
+    show_menu()
 def show_menu():
     button_color = (200, 200, 200)
     hover_color = (150, 150, 150)
