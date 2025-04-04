@@ -15,7 +15,7 @@ INITIAL_SCROLL_SPEED = 6
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
-BLUE = (0, 0, 255)
+BLUE = (0, 0, 255) # cardinal de pauvrelieu <-- IMPORTANT
 GREEN = (0, 255, 0)
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
