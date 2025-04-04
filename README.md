@@ -29,7 +29,7 @@ Travail fini:
 
 ### Contributeur:  
 
-Ce projet a été développé par : Baranovskii Roman, Bideau James, Bonnière Tristan, Broage Théodore
+Ce projet a été développé par : Baranovskii Roman, Bonnière Tristan, Broage Théodore
 
 ### Licence:  
 
