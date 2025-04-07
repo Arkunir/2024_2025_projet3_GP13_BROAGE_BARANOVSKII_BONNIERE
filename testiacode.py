@@ -358,48 +358,48 @@ def ai_test_play():
             "Block": {"detection": 22, "jump_timing": 22, "jump_count": 1},
             "DoublePikes": {"detection": 24, "jump_timing": 14, "jump_count": 1},
             "TriplePikes": {"detection": 26, "jump_timing": 16, "jump_count": 1},
-            "QuadruplePikes": {"detection": 28, "jump_timing": 18, "jump_count": 1},
-            "BlockGapBlockWithSpike": {"detection": 26, "jump_timing": 26, "jump_count": 1}
+            "QuadruplePikes": {"detection": 28, "jump_timing": 18, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 26, "jump_timing": 26, "jump_count": 2}
         },
         7: {
             "Obstacle": {"detection": 22, "jump_timing": 13, "jump_count": 1},
             "Block": {"detection": 24, "jump_timing": 26, "jump_count": 1},
             "DoublePikes": {"detection": 25, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 27, "jump_timing": 17, "jump_count": 1},
-            "QuadruplePikes": {"detection": 29, "jump_timing": 19, "jump_count": 1},
-            "BlockGapBlockWithSpike": {"detection": 28, "jump_timing": 28, "jump_count": 1}
+            "QuadruplePikes": {"detection": 29, "jump_timing": 19, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 28, "jump_timing": 28, "jump_count": 2}
         },
         8: {
             "Obstacle": {"detection": 24, "jump_timing": 14, "jump_count": 1},
             "Block": {"detection": 26, "jump_timing": 29, "jump_count": 1},
             "DoublePikes": {"detection": 27, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 29, "jump_timing": 8, "jump_count": 1},
-            "QuadruplePikes": {"detection": 31, "jump_timing": 7, "jump_count": 1},
-            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 32, "jump_count": 1}
+            "QuadruplePikes": {"detection": 31, "jump_timing": 7, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 10, "jump_timing": 31, "jump_count": 2}
         },
         9: {
-            "Obstacle": {"detection": 26, "jump_timing": 15, "jump_count": 1},
-            "Block": {"detection": 28, "jump_timing": 32, "jump_count": 1},
+            "Obstacle": {"detection": 26, "jump_timing": 8, "jump_count": 1},
+            "Block": {"detection": 28, "jump_timing": 8, "jump_count": 1},
             "DoublePikes": {"detection": 29, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 32, "jump_timing": 8, "jump_count": 1},
-            "QuadruplePikes": {"detection": 34, "jump_timing": 23, "jump_count": 1},
-            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 30, "jump_count": 1}
+            "QuadruplePikes": {"detection": 34, "jump_timing": 3, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 30, "jump_count": 2}
         },
         10: {
             "Obstacle": {"detection": 28, "jump_timing": 16, "jump_count": 1},
             "Block": {"detection": 30, "jump_timing": 34, "jump_count": 1},
             "DoublePikes": {"detection": 31, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 34, "jump_timing": 22, "jump_count": 1},
-            "QuadruplePikes": {"detection": 36, "jump_timing": 24, "jump_count": 1},
-            "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 30, "jump_count": 1}
+            "QuadruplePikes": {"detection": 36, "jump_timing": 24, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 30, "jump_count": 2}
         },
         11: {
             "Obstacle": {"detection": 30, "jump_timing": 17, "jump_count": 1},
             "Block": {"detection": 32, "jump_timing": 36, "jump_count": 1},
             "DoublePikes": {"detection": 33, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 36, "jump_timing": 23, "jump_count": 1},
-            "QuadruplePikes": {"detection": 38, "jump_timing": 25, "jump_count": 1},
-            "BlockGapBlockWithSpike": {"detection": 36, "jump_timing": 37, "jump_count": 1}
+            "QuadruplePikes": {"detection": 38, "jump_timing": 25, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 36, "jump_timing": 37, "jump_count": 2}
         }
     }
     
@@ -415,14 +415,14 @@ def ai_test_play():
                 
         needs_to_jump = False
         
-        # Gestion du spam de sauts - uniquement si le joueur n'est pas déjà en train de sauter
+        # Gestion du spam de sauts
         for obj_id in list(jump_spam_timers.keys()):
             timer_info = jump_spam_timers[obj_id]
             if current_time >= timer_info["next_jump_time"]:
                 if timer_info["jumps_remaining"] > 0 and not player.is_jumping:
                     player.jump()
                     timer_info["jumps_remaining"] -= 1
-                    timer_info["next_jump_time"] = current_time + 100  # 100ms entre les sauts
+                    timer_info["next_jump_time"] = current_time + 120  # 100ms entre les sauts
                 else:
                     del jump_spam_timers[obj_id]
         
@@ -486,15 +486,14 @@ def ai_test_play():
                 optimal_jump_distance = current_speed * jump_timing_multiplier
     
                 if next_obstacle_x - player.rect.right <= optimal_jump_distance:
-                    # On saute seulement si le joueur n'est pas déjà en train de sauter
-                    if not player.is_jumping:
-                        player.jump()
-                        
-                        # Initialiser le système de sauts standard
-                        jump_spam_timers[next_obstacle_id] = {
-                            "jumps_remaining": 0,  # Plus de sauts supplémentaires
-                            "next_jump_time": current_time + 100
-                        }
+                    # Initialiser le spam de sauts
+                    jump_spam_timers[next_obstacle_id] = {
+                        "jumps_remaining": jump_count - 1,  # -1 car on va faire un saut immédiatement
+                        "next_jump_time": current_time + 100  # 100ms après le premier saut
+                    }
+                    
+                    # Premier saut immédiat
+                    player.jump()
 
         if current_time - last_object > object_interval:
             if current_speed == 6:
