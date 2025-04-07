@@ -13,7 +13,7 @@ from klass import Block
 from klass import BlockGapBlockWithSpike
 from klass import BackOnTrackObstacle
 from klass import Button
-from klass import ElevatedPlatformWithSpikes
+
 WIDTH, HEIGHT = 800, 600
 FPS = 60
 GRAVITY = 1
