@@ -350,7 +350,6 @@ def ai_test_play():
     
     # Dictionnaire pour le spam de sauts
     jump_spam_timers = {}
-    jump_force_timers = {}  # Nouveau dictionnaire pour forcer les sauts indépendamment de is_jumping
     
     # Paramètres complets pour chaque obstacle et chaque vitesse
     jump_params = {
@@ -359,49 +358,48 @@ def ai_test_play():
             "Block": {"detection": 22, "jump_timing": 22, "jump_count": 1},
             "DoublePikes": {"detection": 24, "jump_timing": 14, "jump_count": 1},
             "TriplePikes": {"detection": 26, "jump_timing": 16, "jump_count": 1},
-            "QuadruplePikes": {"detection": 28, "jump_timing": 18, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 26, "jump_timing": 26, "jump_count": 2}
+            "QuadruplePikes": {"detection": 28, "jump_timing": 18, "jump_count": 1},
+            "BlockGapBlockWithSpike": {"detection": 26, "jump_timing": 26, "jump_count": 1}
         },
         7: {
             "Obstacle": {"detection": 22, "jump_timing": 13, "jump_count": 1},
             "Block": {"detection": 24, "jump_timing": 26, "jump_count": 1},
             "DoublePikes": {"detection": 25, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 27, "jump_timing": 17, "jump_count": 1},
-            "QuadruplePikes": {"detection": 29, "jump_timing": 19, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 28, "jump_timing": 28, "jump_count": 2}
+            "QuadruplePikes": {"detection": 29, "jump_timing": 19, "jump_count": 1},
+            "BlockGapBlockWithSpike": {"detection": 28, "jump_timing": 28, "jump_count": 1}
         },
         8: {
             "Obstacle": {"detection": 24, "jump_timing": 14, "jump_count": 1},
             "Block": {"detection": 26, "jump_timing": 29, "jump_count": 1},
             "DoublePikes": {"detection": 27, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 29, "jump_timing": 8, "jump_count": 1},
-            "QuadruplePikes": {"detection": 31, "jump_timing": 7, "jump_count": 2},
-            # Ajusté les paramètres pour BlockGapBlockWithSpike à la vitesse 8
-            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 32, "jump_count": 2, "force_jump": True, "force_delay": 250}
+            "QuadruplePikes": {"detection": 31, "jump_timing": 7, "jump_count": 1},
+            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 32, "jump_count": 1}
         },
         9: {
             "Obstacle": {"detection": 26, "jump_timing": 15, "jump_count": 1},
             "Block": {"detection": 28, "jump_timing": 32, "jump_count": 1},
             "DoublePikes": {"detection": 29, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 32, "jump_timing": 8, "jump_count": 1},
-            "QuadruplePikes": {"detection": 34, "jump_timing": 23, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 30, "jump_count": 2}
+            "QuadruplePikes": {"detection": 34, "jump_timing": 23, "jump_count": 1},
+            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 30, "jump_count": 1}
         },
         10: {
             "Obstacle": {"detection": 28, "jump_timing": 16, "jump_count": 1},
             "Block": {"detection": 30, "jump_timing": 34, "jump_count": 1},
             "DoublePikes": {"detection": 31, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 34, "jump_timing": 22, "jump_count": 1},
-            "QuadruplePikes": {"detection": 36, "jump_timing": 24, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 30, "jump_count": 2}
+            "QuadruplePikes": {"detection": 36, "jump_timing": 24, "jump_count": 1},
+            "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 30, "jump_count": 1}
         },
         11: {
             "Obstacle": {"detection": 30, "jump_timing": 17, "jump_count": 1},
             "Block": {"detection": 32, "jump_timing": 36, "jump_count": 1},
             "DoublePikes": {"detection": 33, "jump_timing": 10, "jump_count": 1},
             "TriplePikes": {"detection": 36, "jump_timing": 23, "jump_count": 1},
-            "QuadruplePikes": {"detection": 38, "jump_timing": 25, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 36, "jump_timing": 37, "jump_count": 2}
+            "QuadruplePikes": {"detection": 38, "jump_timing": 25, "jump_count": 1},
+            "BlockGapBlockWithSpike": {"detection": 36, "jump_timing": 37, "jump_count": 1}
         }
     }
     
@@ -417,7 +415,7 @@ def ai_test_play():
                 
         needs_to_jump = False
         
-        # Gestion du spam de sauts
+        # Gestion du spam de sauts - uniquement si le joueur n'est pas déjà en train de sauter
         for obj_id in list(jump_spam_timers.keys()):
             timer_info = jump_spam_timers[obj_id]
             if current_time >= timer_info["next_jump_time"]:
@@ -427,27 +425,6 @@ def ai_test_play():
                     timer_info["next_jump_time"] = current_time + 100  # 100ms entre les sauts
                 else:
                     del jump_spam_timers[obj_id]
-        
-        # Nouvelle gestion des sauts forcés (même en l'air)
-        for obj_id in list(jump_force_timers.keys()):
-            timer_info = jump_force_timers[obj_id]
-            if current_time >= timer_info["next_jump_time"]:
-                if timer_info["jumps_remaining"] > 0:
-                    # Si le joueur est en l'air, temporairement réinitialiser l'état de saut
-                    was_jumping = player.is_jumping
-                    if was_jumping:
-                        player.is_jumping = False
-                    
-                    player.jump()
-                    
-                    # Restaurer l'état de saut si nécessaire
-                    if was_jumping:
-                        player.is_jumping = True
-                        
-                    timer_info["jumps_remaining"] -= 1
-                    timer_info["next_jump_time"] = current_time + timer_info["delay"]
-                else:
-                    del jump_force_timers[obj_id]
         
         base_detection_distance = 200
         next_obstacle_x = float('inf')
@@ -495,40 +472,28 @@ def ai_test_play():
                         next_obstacle_id = obj_id
                         needs_to_jump = True
         
-            if needs_to_jump and next_obstacle_id not in jump_spam_timers and next_obstacle_id not in jump_force_timers:
+            if needs_to_jump and next_obstacle_id not in jump_spam_timers:
                 speed_params = jump_params.get(current_speed, {})
                 obstacle_params = speed_params.get(next_obstacle_type, {})
     
                 if obstacle_params:
                     jump_timing_multiplier = obstacle_params.get("jump_timing", 15)
                     jump_count = obstacle_params.get("jump_count", 1)
-                    force_jump = obstacle_params.get("force_jump", False)
-                    force_delay = obstacle_params.get("force_delay", 100)
                 else:
                     jump_timing_multiplier = 15
                     jump_count = 1
-                    force_jump = False
-                    force_delay = 100
     
                 optimal_jump_distance = current_speed * jump_timing_multiplier
     
                 if next_obstacle_x - player.rect.right <= optimal_jump_distance:
-                    # Premier saut immédiat
-                    player.jump()
-                    
-                    # Initialiser le système de sauts selon le type d'obstacle
-                    if force_jump and jump_count > 1:
-                        # Utiliser le système de sauts forcés pour certains obstacles
-                        jump_force_timers[next_obstacle_id] = {
-                            "jumps_remaining": jump_count - 1,  # -1 car on vient de faire un saut
-                            "next_jump_time": current_time + force_delay,
-                            "delay": force_delay
-                        }
-                    else:
-                        # Utiliser le système de spam de sauts standard
+                    # On saute seulement si le joueur n'est pas déjà en train de sauter
+                    if not player.is_jumping:
+                        player.jump()
+                        
+                        # Initialiser le système de sauts standard
                         jump_spam_timers[next_obstacle_id] = {
-                            "jumps_remaining": jump_count - 1,  # -1 car on va faire un saut immédiatement
-                            "next_jump_time": current_time + 100  # 100ms après le premier saut
+                            "jumps_remaining": 0,  # Plus de sauts supplémentaires
+                            "next_jump_time": current_time + 100
                         }
 
         if current_time - last_object > object_interval:
@@ -638,8 +603,6 @@ def ai_test_play():
                 game_objects.remove(obj)
                 if obj_id in jump_spam_timers:
                     del jump_spam_timers[obj_id]
-                if obj_id in jump_force_timers:
-                    del jump_force_timers[obj_id]
                 score += 1
                 
                 if score < speed_threshold_random:
