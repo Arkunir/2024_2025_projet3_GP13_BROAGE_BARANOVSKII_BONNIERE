@@ -330,9 +330,9 @@ def ai_test_play():
         6: [800, 1400],
         7: [900, 1600],
         8: [1200, 1800],
-        9: [1300, 2000],
-        10: [1400, 2100],
-        11: [1500, 2200]
+        9: [1500, 2000],
+        10: [1600, 2100],
+        11: [1700, 2200]
     }
     
     object_interval = random.randint(*obstacle_intervals[INITIAL_SCROLL_SPEED])
@@ -378,28 +378,28 @@ def ai_test_play():
             "BlockGapBlockWithSpike": {"detection": 10, "jump_timing": 31, "jump_count": 2}
         },
         9: {
-            "Obstacle": {"detection": 26, "jump_timing": 8, "jump_count": 1},
-            "Block": {"detection": 28, "jump_timing": 8, "jump_count": 1},
-            "DoublePikes": {"detection": 29, "jump_timing": 10, "jump_count": 1},
-            "TriplePikes": {"detection": 32, "jump_timing": 8, "jump_count": 1},
-            "QuadruplePikes": {"detection": 34, "jump_timing": 3, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 30, "jump_count": 2}
+            "Obstacle": {"detection": 20, "jump_timing": 8, "jump_count": 1},
+            "Block": {"detection": 20, "jump_timing": 8, "jump_count": 1},
+            "DoublePikes": {"detection": 20, "jump_timing": 10, "jump_count": 1},
+            "TriplePikes": {"detection": 20, "jump_timing": 8, "jump_count": 1},
+            "QuadruplePikes": {"detection": 20, "jump_timing": 5, "jump_count": 1},
+            "BlockGapBlockWithSpike": {"detection": 10, "jump_timing": 30, "jump_count": 2}
         },
         10: {
-            "Obstacle": {"detection": 28, "jump_timing": 16, "jump_count": 1},
-            "Block": {"detection": 30, "jump_timing": 34, "jump_count": 1},
+            "Obstacle": {"detection": 28, "jump_timing": 10, "jump_count": 1},
+            "Block": {"detection": 30, "jump_timing": 10, "jump_count": 1},
             "DoublePikes": {"detection": 31, "jump_timing": 10, "jump_count": 1},
-            "TriplePikes": {"detection": 34, "jump_timing": 22, "jump_count": 1},
-            "QuadruplePikes": {"detection": 36, "jump_timing": 24, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 30, "jump_count": 2}
+            "TriplePikes": {"detection": 34, "jump_timing": 10, "jump_count": 1},
+            "QuadruplePikes": {"detection": 36, "jump_timing": 8, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 20, "jump_timing": 30, "jump_count": 2}
         },
         11: {
-            "Obstacle": {"detection": 30, "jump_timing": 17, "jump_count": 1},
-            "Block": {"detection": 32, "jump_timing": 36, "jump_count": 1},
-            "DoublePikes": {"detection": 33, "jump_timing": 10, "jump_count": 1},
-            "TriplePikes": {"detection": 36, "jump_timing": 23, "jump_count": 1},
-            "QuadruplePikes": {"detection": 38, "jump_timing": 25, "jump_count": 2},
-            "BlockGapBlockWithSpike": {"detection": 36, "jump_timing": 37, "jump_count": 2}
+            "Obstacle": {"detection": 30, "jump_timing": 12, "jump_count": 1},
+            "Block": {"detection": 32, "jump_timing": 12, "jump_count": 1},
+            "DoublePikes": {"detection": 33, "jump_timing": 12, "jump_count": 1},
+            "TriplePikes": {"detection": 36, "jump_timing": 12, "jump_count": 1},
+            "QuadruplePikes": {"detection": 38, "jump_timing": 8, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 20, "jump_timing": 30, "jump_count": 2}
         }
     }
     
