@@ -11,7 +11,6 @@ from klass import TriplePikes
 from klass import QuadruplePikes
 from klass import Block
 from klass import BlockGapBlockWithSpike
-from klass import BackOnTrackObstacle
 from klass import Button
 
 WIDTH, HEIGHT = 800, 600
@@ -90,17 +89,13 @@ def main():
         if current_time - last_object > object_interval:
             if current_speed == 6:
                 choice = random.random()
-                if choice < 0.1:
-                    obj = BackOnTrackObstacle(WIDTH)
-                elif choice < 0.6:
+                if choice < 0.6:
                     obj = Obstacle(WIDTH)
                 else:
                     obj = Block(WIDTH)
             elif current_speed == 7:
                 choice = random.random()
-                if choice < 0.1:
-                    obj = BackOnTrackObstacle(WIDTH)
-                elif choice < 0.6:
+                if choice < 0.6:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.8:
                     obj = Block(WIDTH)
@@ -108,9 +103,7 @@ def main():
                     obj = DoublePikes(WIDTH)
             elif current_speed == 8:
                 choice = random.random()
-                if choice < 0.1:
-                    obj = BackOnTrackObstacle(WIDTH)
-                elif choice < 0.4:
+                if choice < 0.4:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.7:
                     obj = DoublePikes(WIDTH)
@@ -132,9 +125,7 @@ def main():
                     obj = QuadruplePikes(WIDTH)
             elif current_speed >= 10:
                 choice = random.random()
-                if choice < 0.2:
-                    obj = BackOnTrackObstacle(WIDTH)
-                elif choice < 0.5:
+                if choice < 0.5:
                     obj = DoublePikes(WIDTH)
                 elif choice < 0.8:
                     obj = BlockGapBlockWithSpike(WIDTH)
@@ -162,14 +153,6 @@ def main():
                 player.is_alive = False
                 print("Game Over! Collision avec un obstacle")
                 running = False
-            
-            elif isinstance(obj, BackOnTrackObstacle):
-                for rect in obj.get_rects()[:4]:  # Spike rects
-                    if player.rect.colliderect(rect):
-                        player.is_alive = False
-                        print("Game Over! Collision avec un pic")
-                        running = False
-                        break
                 
                 if not running:
                     break
@@ -207,8 +190,7 @@ def main():
                 (isinstance(obj, DoublePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, TriplePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, QuadruplePikes) and obj.x + obj.width < 0) or
-                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0) or
-                (isinstance(obj, BackOnTrackObstacle) and obj.x + obj.width < 0)):
+                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
                 game_objects.remove(obj)
                 score += 1
                 

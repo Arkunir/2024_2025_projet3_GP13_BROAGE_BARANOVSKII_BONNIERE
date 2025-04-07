@@ -8,8 +8,8 @@ class JoueurMode:
         self.clock = clock
         self.player = Player(100, SCREEN_HEIGHT - 100)
         
-        # Initialisation des obstacles et plateforme
-        self.platform = Platform(0, SCREEN_HEIGHT - 50, SCREEN_WIDTH * 3)  # Plateforme longue
+        # Initialisation de la plateforme "infinie" à la même hauteur
+        self.platform = Platform(0, SCREEN_HEIGHT - 50)  # Plateforme avec longueur "infinie"
         self.obstacles = []
         self.generate_level()
         
@@ -23,7 +23,7 @@ class JoueurMode:
         # Ici, vous pouvez créer une séquence d'obstacles
         # Pour l'exemple, j'ajoute quelques spikes
         for i in range(10):
-            spike = Spike(500 + i * 300, SCREEN_HEIGHT - 70)
+            spike = Spike(500 + i * 300, SCREEN_HEIGHT - 50)  # Ajusté pour être au niveau de la plateforme
             self.obstacles.append(spike)
     
     def update(self):
@@ -66,7 +66,7 @@ class JoueurMode:
         
         # Écran de game over
         if self.game_over:
-            game_over_text = self.font.render("GAME OVER - Press R to Restart", True, COLORS["text"])
+            game_over_text = self.font.render("GAME OVER - Appuyez sur ESPACE pour recommencer", True, COLORS["text"])
             self.screen.blit(game_over_text, (SCREEN_WIDTH//2 - game_over_text.get_width()//2, SCREEN_HEIGHT//2))
         
         pygame.display.flip()
@@ -81,10 +81,12 @@ class JoueurMode:
                 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        self.player.jump()
-                    if event.key == pygame.K_r and self.game_over:
-                        # Réinitialisation
-                        self.__init__(self.screen, self.clock)
+                        if self.game_over:
+                            # Recommencer avec la barre d'espace si game over
+                            self.__init__(self.screen, self.clock)
+                        else:
+                            # Sauter avec la barre d'espace pendant le jeu
+                            self.player.jump()
                     if event.key == pygame.K_ESCAPE:
                         running = False
             
