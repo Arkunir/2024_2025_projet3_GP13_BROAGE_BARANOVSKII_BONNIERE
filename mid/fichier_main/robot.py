@@ -8,8 +8,8 @@ class RobotMode:
         self.clock = clock
         self.player = Player(100, SCREEN_HEIGHT - 100)
         
-        # Initialisation des obstacles et plateforme
-        self.platform = Platform(0, SCREEN_HEIGHT - 50, SCREEN_WIDTH * 3)
+        # Initialisation de la plateforme "infinie" à la même hauteur
+        self.platform = Platform(0, SCREEN_HEIGHT - 50)  # Plateforme avec longueur "infinie"
         self.obstacles = []
         self.generate_level()
         
@@ -38,7 +38,7 @@ class RobotMode:
     def generate_level(self):
         # Création du niveau avec obstacles
         for i in range(10):
-            spike = Spike(500 + i * 300, SCREEN_HEIGHT - 70)
+            spike = Spike(500 + i * 300, SCREEN_HEIGHT - 50)  # Ajusté pour être au niveau de la plateforme
             self.obstacles.append(spike)
     
     def robot_logic(self):
@@ -111,7 +111,7 @@ class RobotMode:
         
         # Écran de game over
         if self.game_over:
-            game_over_text = self.font.render("GAME OVER - Press R to Restart", True, COLORS["text"])
+            game_over_text = self.font.render("GAME OVER - Appuyez sur ESPACE pour recommencer", True, COLORS["text"])
             self.screen.blit(game_over_text, (SCREEN_WIDTH//2 - game_over_text.get_width()//2, SCREEN_HEIGHT//2))
         
         pygame.display.flip()
@@ -125,11 +125,13 @@ class RobotMode:
                     sys.exit()
                 
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE and not self.robot_active:
-                        self.player.jump()
-                    if event.key == pygame.K_r and self.game_over:
-                        # Réinitialisation
-                        self.__init__(self.screen, self.clock)
+                    if event.key == pygame.K_SPACE:
+                        if self.game_over:
+                            # Recommencer avec la barre d'espace si game over
+                            self.__init__(self.screen, self.clock)
+                        elif not self.robot_active:
+                            # Sauter avec la barre d'espace si le robot est inactif
+                            self.player.jump()
                     if event.key == pygame.K_ESCAPE:
                         running = False
                     if event.key == pygame.K_F1:

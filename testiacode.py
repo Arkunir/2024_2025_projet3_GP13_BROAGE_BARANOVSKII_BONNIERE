@@ -329,7 +329,7 @@ def ai_test_play():
     obstacle_intervals = {
         6: [800, 1400],
         7: [900, 1600],
-        8: [1100, 1800],
+        8: [1200, 1800],
         9: [1300, 2000],
         10: [1400, 2100],
         11: [1500, 2200]
@@ -348,7 +348,60 @@ def ai_test_play():
     speed_threshold_random = 100
     next_random_change = speed_threshold_random + random.randint(25, 50)
     
-    second_jump_required = False
+    # Dictionnaire pour le spam de sauts
+    jump_spam_timers = {}
+    
+    # Paramètres complets pour chaque obstacle et chaque vitesse
+    jump_params = {
+        6: {
+            "Obstacle": {"detection": 20, "jump_timing": 12, "jump_count": 1},
+            "Block": {"detection": 22, "jump_timing": 22, "jump_count": 1},
+            "DoublePikes": {"detection": 24, "jump_timing": 14, "jump_count": 1},
+            "TriplePikes": {"detection": 26, "jump_timing": 16, "jump_count": 1},
+            "QuadruplePikes": {"detection": 28, "jump_timing": 18, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 26, "jump_timing": 26, "jump_count": 2}
+        },
+        7: {
+            "Obstacle": {"detection": 22, "jump_timing": 13, "jump_count": 1},
+            "Block": {"detection": 24, "jump_timing": 26, "jump_count": 1},
+            "DoublePikes": {"detection": 25, "jump_timing": 10, "jump_count": 1},
+            "TriplePikes": {"detection": 27, "jump_timing": 17, "jump_count": 1},
+            "QuadruplePikes": {"detection": 29, "jump_timing": 19, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 28, "jump_timing": 28, "jump_count": 2}
+        },
+        8: {
+            "Obstacle": {"detection": 24, "jump_timing": 14, "jump_count": 1},
+            "Block": {"detection": 26, "jump_timing": 29, "jump_count": 1},
+            "DoublePikes": {"detection": 27, "jump_timing": 10, "jump_count": 1},
+            "TriplePikes": {"detection": 29, "jump_timing": 8, "jump_count": 1},
+            "QuadruplePikes": {"detection": 31, "jump_timing": 7, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 31, "jump_count": 2}
+        },
+        9: {
+            "Obstacle": {"detection": 26, "jump_timing": 15, "jump_count": 1},
+            "Block": {"detection": 28, "jump_timing": 32, "jump_count": 1},
+            "DoublePikes": {"detection": 29, "jump_timing": 10, "jump_count": 1},
+            "TriplePikes": {"detection": 32, "jump_timing": 8, "jump_count": 1},
+            "QuadruplePikes": {"detection": 34, "jump_timing": 23, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 40, "jump_timing": 30, "jump_count": 2}
+        },
+        10: {
+            "Obstacle": {"detection": 28, "jump_timing": 16, "jump_count": 1},
+            "Block": {"detection": 30, "jump_timing": 34, "jump_count": 1},
+            "DoublePikes": {"detection": 31, "jump_timing": 10, "jump_count": 1},
+            "TriplePikes": {"detection": 34, "jump_timing": 22, "jump_count": 1},
+            "QuadruplePikes": {"detection": 36, "jump_timing": 24, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 30, "jump_count": 2}
+        },
+        11: {
+            "Obstacle": {"detection": 30, "jump_timing": 17, "jump_count": 1},
+            "Block": {"detection": 32, "jump_timing": 36, "jump_count": 1},
+            "DoublePikes": {"detection": 33, "jump_timing": 10, "jump_count": 1},
+            "TriplePikes": {"detection": 36, "jump_timing": 23, "jump_count": 1},
+            "QuadruplePikes": {"detection": 38, "jump_timing": 25, "jump_count": 2},
+            "BlockGapBlockWithSpike": {"detection": 36, "jump_timing": 37, "jump_count": 2}
+        }
+    }
     
     running = True
     while running:
@@ -362,72 +415,51 @@ def ai_test_play():
                 
         needs_to_jump = False
         
-        jump_params = {
-            6: {
-                "Obstacle": {"detection": 20, "jump_timing": 12},
-                "Block": {"detection": 22, "jump_timing": 22}
-            },
-            7: {
-                "Obstacle": {"detection": 22, "jump_timing": 13},
-                "Block": {"detection": 24, "jump_timing": 26},
-                "DoublePikes": {"detection": 25, "jump_timing": 10}
-            },
-            8: {
-                "Obstacle": {"detection": 24, "jump_timing": 14},
-                "Block": {"detection": 26, "jump_timing": 29},
-                "DoublePikes": {"detection": 27, "jump_timing": 10},
-                "BlockGapBlockWithSpike": {"detection": 28, "jump_timing": 29}
-            },
-            9: {
-                "Obstacle": {"detection": 26, "jump_timing": 15},
-                "Block": {"detection": 28, "jump_timing": 16},
-                "DoublePikes": {"detection": 29, "jump_timing": 18},
-                "BlockGapBlockWithSpike": {"detection": 30, "jump_timing": 19},
-                "TriplePikes": {"detection": 32, "jump_timing": 21}
-            },
-            10: {
-                "DoublePikes": {"detection": 31, "jump_timing": 19},
-                "BlockGapBlockWithSpike": {"detection": 32, "jump_timing": 20},
-                "TriplePikes": {"detection": 34, "jump_timing": 22}
-            },
-            11: {
-                "DoublePikes": {"detection": 33, "jump_timing": 20},
-                "BlockGapBlockWithSpike": {"detection": 34, "jump_timing": 21},
-                "TriplePikes": {"detection": 36, "jump_timing": 23},
-                "QuadruplePikes": {"detection": 38, "jump_timing": 25}
-            }
-        }
+        # Gestion du spam de sauts
+        for obj_id in list(jump_spam_timers.keys()):
+            timer_info = jump_spam_timers[obj_id]
+            if current_time >= timer_info["next_jump_time"]:
+                if timer_info["jumps_remaining"] > 0 and not player.is_jumping:
+                    player.jump()
+                    timer_info["jumps_remaining"] -= 1
+                    timer_info["next_jump_time"] = current_time + 100  # 100ms entre les sauts
+                else:
+                    del jump_spam_timers[obj_id]
         
         base_detection_distance = 200
         next_obstacle_x = float('inf')
         next_obstacle_type = None
+        next_obstacle_id = None
         
         for obj in game_objects:
             obstacle_info = []
+            obj_id = id(obj)  # Identifiant unique pour l'objet
             
             if isinstance(obj, Obstacle):
-                obstacle_info.append((obj.x, "Obstacle"))
+                obstacle_info.append((obj.x, "Obstacle", obj_id))
             elif isinstance(obj, Block):
-                obstacle_info.append((obj.rect.x, "Block"))
+                obstacle_info.append((obj.rect.x, "Block", obj_id))
             elif isinstance(obj, DoublePikes):
-                obstacle_info.append((obj.x, "DoublePikes"))
+                obstacle_info.append((obj.x, "DoublePikes", obj_id))
             elif isinstance(obj, TriplePikes):
-                obstacle_info.append((obj.x, "TriplePikes"))
+                obstacle_info.append((obj.x, "TriplePikes", obj_id))
             elif isinstance(obj, QuadruplePikes):
-                obstacle_info.append((obj.x, "QuadruplePikes"))
+                obstacle_info.append((obj.x, "QuadruplePikes", obj_id))
             elif isinstance(obj, BlockGapBlockWithSpike):
-                obstacle_info.append((obj.x, "BlockGapBlockWithSpike"))
+                obstacle_info.append((obj.x, "BlockGapBlockWithSpike", obj_id))
             
-            for pos, obj_type in obstacle_info:
+            for pos, obj_type, obj_id in obstacle_info:
                 speed_params = jump_params.get(current_speed, {})
                 obstacle_params = speed_params.get(obj_type, {})
                 
                 if obstacle_params:
                     detection_multiplier = obstacle_params.get("detection", 20)
                     jump_timing_multiplier = obstacle_params.get("jump_timing", 12)
+                    jump_count = obstacle_params.get("jump_count", 1)
                 else:
                     detection_multiplier = 20
                     jump_timing_multiplier = 12
+                    jump_count = 1
                 
                 detection_distance = base_detection_distance + (current_speed * detection_multiplier)
                 
@@ -437,35 +469,31 @@ def ai_test_play():
                     if pos < next_obstacle_x:
                         next_obstacle_x = pos
                         next_obstacle_type = obj_type
+                        next_obstacle_id = obj_id
                         needs_to_jump = True
         
-            if needs_to_jump and not player.is_jumping:
+            if needs_to_jump and next_obstacle_id not in jump_spam_timers:
                 speed_params = jump_params.get(current_speed, {})
-    
                 obstacle_params = speed_params.get(next_obstacle_type, {})
     
                 if obstacle_params:
                     jump_timing_multiplier = obstacle_params.get("jump_timing", 15)
+                    jump_count = obstacle_params.get("jump_count", 1)
                 else:
                     jump_timing_multiplier = 15
+                    jump_count = 1
     
                 optimal_jump_distance = current_speed * jump_timing_multiplier
     
                 if next_obstacle_x - player.rect.right <= optimal_jump_distance:
+                    # Initialiser le spam de sauts
+                    jump_spam_timers[next_obstacle_id] = {
+                        "jumps_remaining": jump_count - 1,  # -1 car on va faire un saut immédiatement
+                        "next_jump_time": current_time + 100  # 100ms après le premier saut
+                    }
+                    
+                    # Premier saut immédiat
                     player.jump()
-        
-                    if next_obstacle_type == "BlockGapBlockWithSpike":
-                        def check_second_jump():
-                            if player.just_landed:
-                                player.jump()
-                                return True
-                            return False
-            
-                        pygame.time.set_timer(pygame.USEREVENT, 100)
-                        for event in pygame.event.get():
-                            if event.type == pygame.USEREVENT:
-                                if check_second_jump():
-                                    pygame.time.set_timer(pygame.USEREVENT, 0)
 
         if current_time - last_object > object_interval:
             if current_speed == 6:
@@ -562,6 +590,9 @@ def ai_test_play():
                         running = False
                         return
             
+            # Suppression de l'obstacle une fois qu'il est sorti de l'écran
+            # et suppression du timer correspondant s'il existe
+            obj_id = id(obj)
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
                 (isinstance(obj, DoublePikes) and obj.x + obj.width < 0) or
@@ -569,6 +600,8 @@ def ai_test_play():
                 (isinstance(obj, QuadruplePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
                 game_objects.remove(obj)
+                if obj_id in jump_spam_timers:
+                    del jump_spam_timers[obj_id]
                 score += 1
                 
                 if score < speed_threshold_random:
@@ -624,6 +657,7 @@ def ai_test_play():
         
         ai_text = font.render("Mode IA Test", True, (255, 0, 0))
         screen.blit(ai_text, (WIDTH - 150, 20))
+
         
         pygame.display.flip()
         clock.tick(FPS)

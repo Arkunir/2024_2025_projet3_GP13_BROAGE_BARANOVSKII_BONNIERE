@@ -294,31 +294,6 @@ class BlockGapBlockWithSpike(MovingObject):
             pygame.Rect(self.x + CUBE_SIZE * 3, self.y, CUBE_SIZE, self.height),
             pygame.Rect(self.x + CUBE_SIZE * 3, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
         ]
-
-class BackOnTrackObstacle(MovingObject):
-    def __init__(self, x):
-        super().__init__(x)
-        self.x = x
-        self.y = GROUND_HEIGHT - CUBE_SIZE * 2
-        self.width = CUBE_SIZE * 4
-        self.height = CUBE_SIZE
-        
-    def update(self):
-        self.x -= self.scroll_speed
-        
-    def draw(self):
-        # Ceiling spikes
-        for i in range(4):
-            pygame.draw.polygon(screen, RED, [
-                (self.x + i * CUBE_SIZE, self.y),
-                (self.x + i * CUBE_SIZE + CUBE_SIZE, self.y),
-                (self.x + i * CUBE_SIZE + CUBE_SIZE/2, self.y - CUBE_SIZE)
-            ])
-        
-        # Three yellow pads
-        for i in range(3):
-            pygame.draw.rect(screen, (255, 255, 0), pygame.Rect(
-                self.x + i * CUBE_SIZE + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2))
         
     def get_rects(self):
         return [
