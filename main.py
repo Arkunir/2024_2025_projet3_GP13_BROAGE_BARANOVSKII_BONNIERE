@@ -12,7 +12,7 @@ from klass import QuadruplePikes
 from klass import Block
 from klass import BlockGapBlockWithSpike
 from klass import Button
-
+from klass import BouncingObstacle
 WIDTH, HEIGHT = 800, 600
 FPS = 60
 GRAVITY = 1
