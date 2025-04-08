@@ -92,7 +92,7 @@ def main():
                 if choice < 0.6:
                     obj = Obstacle(WIDTH)
                 else:
-                    obj = Block(WIDTH)
+                    obj = BouncingObstacle(WIDTH)
             elif current_speed == 7:
                 choice = random.random()
                 if choice < 0.6:
