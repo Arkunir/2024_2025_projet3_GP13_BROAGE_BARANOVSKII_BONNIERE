@@ -92,7 +92,7 @@ def main():
                 if choice < 0.6:
                     obj = Obstacle(WIDTH)
                 else:
-                    obj = BouncingObstacle(WIDTH)
+                    obj = Block(WIDTH)
             elif current_speed == 7:
                 choice = random.random()
                 if choice < 0.6:
@@ -103,12 +103,14 @@ def main():
                     obj = DoublePikes(WIDTH)
             elif current_speed == 8:
                 choice = random.random()
-                if choice < 0.4:
+                if choice < 0.3:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.7:
+                elif choice < 0.5:
                     obj = DoublePikes(WIDTH)
-                else:
+                elif choice < 0.7:
                     obj = BlockGapBlockWithSpike(WIDTH)
+                else:
+                    obj = BouncingObstacle(WIDTH) 
             elif current_speed == 9:
                 choice = random.random()
                 if choice < 0.08:
