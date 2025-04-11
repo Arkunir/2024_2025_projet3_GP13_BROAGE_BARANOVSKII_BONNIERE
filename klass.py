@@ -92,6 +92,25 @@ class Player:
                           not (old_y + CUBE_SIZE <= bloc_rect.top)):
                         self.is_alive = False
                         print("Game Over! Collision latérale avec un bloc de la structure")
+            
+            # Ajout de la détection des collisions avec BouncingObstacle
+            elif isinstance(obj, BouncingObstacle):
+                if self.rect.colliderect(obj.rect):
+                    self.is_alive = False
+                    print("Game Over! Collision avec un obstacle rebondissant")
+            
+            # Détection des collisions avec les obstacles standards (pics)
+            elif isinstance(obj, Obstacle) or isinstance(obj, DoublePikes) or isinstance(obj, TriplePikes) or isinstance(obj, QuadruplePikes):
+                if hasattr(obj, 'get_rect'):
+                    if self.rect.colliderect(obj.get_rect()):
+                        self.is_alive = False
+                        print("Game Over! Collision avec un obstacle")
+                elif hasattr(obj, 'get_rects'):
+                    for rect in obj.get_rects():
+                        if self.rect.colliderect(rect):
+                            self.is_alive = False
+                            print("Game Over! Collision avec un obstacle")
+                            break
         
         if self.rect.y >= GROUND_HEIGHT - CUBE_SIZE and not self.standing_on:
             self.rect.y = GROUND_HEIGHT - CUBE_SIZE
@@ -109,7 +128,7 @@ class Player:
             
     def draw(self):
         pygame.draw.rect(screen, BLUE, self.rect)
-
+        
 class MovingObject:
     def __init__(self, x):
         self.scroll_speed = INITIAL_SCROLL_SPEED
@@ -377,6 +396,7 @@ class BouncingObstacle(MovingObject):
         
     def draw(self):
         # Sauvegarder la surface originale
+        surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         
         # Dessiner un motif à la fois dangereux et distinct
         pygame.draw.rect(surface, RED, (0, 0, self.width, self.height))
@@ -397,3 +417,11 @@ class BouncingObstacle(MovingObject):
     def get_rects(self):
         # Pour compatibilité avec le système de collision du Player qui peut attendre get_rects()
         return [self.get_rect()]
+    
+    def check_collision(self, player):
+        # Vérifier si le joueur entre en collision avec cet obstacle
+        if player.rect.colliderect(self.rect):
+            player.is_alive = False
+            print("Game Over! Collision avec un obstacle rebondissant")
+            return True
+        return False
