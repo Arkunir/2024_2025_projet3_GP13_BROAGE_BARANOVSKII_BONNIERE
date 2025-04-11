@@ -190,6 +190,7 @@ def main():
                 (isinstance(obj, DoublePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, TriplePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, QuadruplePikes) and obj.x + obj.width < 0) or
+                (isinstance(obj, BouncingObstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
                 game_objects.remove(obj)
                 score += 1
