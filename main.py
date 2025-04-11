@@ -2,7 +2,6 @@ import pygame
 import sys
 import random
 from testiacode import ai_test_play
-pygame.init()
 from klass import Player
 from klass import MovingObject
 from klass import Obstacle
@@ -14,6 +13,8 @@ from klass import BlockGapBlockWithSpike
 from klass import Button
 from klass import BouncingObstacle
 from klass import DoubleBlockPillar
+
+pygame.init()
 
 WIDTH, HEIGHT = 800, 600
 FPS = 60
@@ -284,10 +285,10 @@ def main():
         
         pygame.draw.rect(screen, BLACK, (0, GROUND_HEIGHT, WIDTH, HEIGHT - GROUND_HEIGHT))
         
-        player.draw()
+        player.draw(screen)  # Correction ici: ajout du paramètre screen
         
         for obj in game_objects:
-            obj.draw()
+            obj.draw(screen)  # Correction ici: s'assurer que tous les objets reçoivent aussi screen
             
         font = pygame.font.SysFont(None, 36)
         score_text = font.render(f"Score: {score}", True, BLACK)

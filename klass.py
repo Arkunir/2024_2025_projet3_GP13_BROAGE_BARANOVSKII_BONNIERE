@@ -1,9 +1,6 @@
 import pygame
 import sys
 import random
-from testiacode import ai_test_play
-from main import main
-pygame.init()
 
 WIDTH, HEIGHT = 800, 600
 FPS = 60
@@ -18,10 +15,6 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0) 
-
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Geometry Dash Clone")
-clock = pygame.time.Clock()
 
 class Player:
     def __init__(self):
@@ -161,7 +154,7 @@ class Player:
             self.velocity_y = JUMP_STRENGTH
             self.is_jumping = True
             
-    def draw(self):
+    def draw(self, screen):
         pygame.draw.rect(screen, BLUE, self.rect)
 
         
@@ -183,16 +176,29 @@ class Obstacle(MovingObject):
     def update(self):
         self.x -= self.scroll_speed
         
-    def draw(self):
+    def draw(self, screen):
         pygame.draw.polygon(screen, RED, [
             (self.x, self.y + self.height),
             (self.x + self.width, self.y + self.height),
             (self.x + self.width/2, self.y)
         ])
-        
+    
+    # Pour la classe Obstacle
     def get_rect(self):
-        square_size = self.height  # Size of the inscribed square
-        return pygame.Rect(self.x + (self.width / 2 - square_size / 2), self.y, square_size, square_size)
+        # Créer une hitbox inscrite dans le triangle au lieu d'utiliser tout le rectangle
+        # Réduire la largeur et la hauteur et ajuster la position
+        reduced_size = min(self.width, self.height) * 0.6  # Réduire à 60% de la taille
+    
+        # Centrer horizontalement et placer vers le haut du triangle
+        x_offset = (self.width - reduced_size) / 2
+        y_offset = self.height - reduced_size * 0.8  # Déplacer un peu vers le haut
+    
+        return pygame.Rect(
+            self.x + x_offset,
+            self.y + y_offset,
+            reduced_size,
+            reduced_size * 0.7  # Hitbox plus petite en hauteur
+        )
 
 
 class DoublePikes(MovingObject):
@@ -206,7 +212,7 @@ class DoublePikes(MovingObject):
     def update(self):
         self.x -= self.scroll_speed
         
-    def draw(self):
+    def draw(self, screen):
         pygame.draw.polygon(screen, RED, [
             (self.x, self.y + self.height),
             (self.x + CUBE_SIZE, self.y + self.height),
@@ -220,11 +226,22 @@ class DoublePikes(MovingObject):
         ])
         
     def get_rects(self):
-        square_size = self.height  # Size of the inscribed square
-        return [
-            pygame.Rect(self.x, self.y, square_size, square_size),
-            pygame.Rect(self.x + CUBE_SIZE, self.y, square_size, square_size)
-        ]
+        hitboxes = []
+        spike_width = self.width / 2  # Largeur d'un pic
+        reduced_size = spike_width * 0.6  # Réduire à 60% de la taille
+    
+        # Pour chaque pic, créer une hitbox inscrite
+        for i in range(2):
+            x_offset = (spike_width - reduced_size) / 2
+            y_offset = self.height - reduced_size * 0.8
+        
+            hitboxes.append(pygame.Rect(
+                self.x + i * spike_width + x_offset,
+                self.y + y_offset,
+                reduced_size,
+                reduced_size * 0.7
+            ))
+        return hitboxes
 
 
 class TriplePikes(MovingObject):
@@ -238,7 +255,7 @@ class TriplePikes(MovingObject):
     def update(self):
         self.x -= self.scroll_speed
         
-    def draw(self):
+    def draw(self, screen):
         pygame.draw.polygon(screen, RED, [
             (self.x, self.y + self.height),
             (self.x + CUBE_SIZE, self.y + self.height),
@@ -258,11 +275,23 @@ class TriplePikes(MovingObject):
         ])
         
     def get_rects(self):
-        return [
-            pygame.Rect(self.x, self.y, CUBE_SIZE, self.height),
-            pygame.Rect(self.x + CUBE_SIZE, self.y, CUBE_SIZE, self.height),
-            pygame.Rect(self.x + CUBE_SIZE*2, self.y, CUBE_SIZE, self.height)
-        ]
+        hitboxes = []
+        spike_width = self.width / 3  # Largeur d'un pic
+        reduced_size = spike_width * 0.6  # Réduire à 60% de la taille
+    
+        # Pour chaque pic, créer une hitbox inscrite
+        for i in range(3):
+            x_offset = (spike_width - reduced_size) / 2
+            y_offset = self.height - reduced_size * 0.8
+        
+            hitboxes.append(pygame.Rect(
+                self.x + i * spike_width + x_offset,
+                self.y + y_offset,
+                reduced_size,
+                reduced_size * 0.7
+            ))
+        return hitboxes
+
 
 class QuadruplePikes(MovingObject):
     def __init__(self, x):
@@ -275,7 +304,7 @@ class QuadruplePikes(MovingObject):
     def update(self):
         self.x -= self.scroll_speed
         
-    def draw(self):
+    def draw(self, screen):
         pygame.draw.polygon(screen, RED, [
             (self.x, self.y + self.height),
             (self.x + CUBE_SIZE, self.y + self.height),
@@ -301,12 +330,23 @@ class QuadruplePikes(MovingObject):
         ])
         
     def get_rects(self):
-        return [
-            pygame.Rect(self.x, self.y, CUBE_SIZE, self.height),
-            pygame.Rect(self.x + CUBE_SIZE, self.y, CUBE_SIZE, self.height),
-            pygame.Rect(self.x + CUBE_SIZE*2, self.y, CUBE_SIZE, self.height),
-            pygame.Rect(self.x + CUBE_SIZE*3, self.y, CUBE_SIZE, self.height)
-        ]
+        hitboxes = []
+        spike_width = self.width / 4  # Largeur d'un pic
+        reduced_size = spike_width * 0.6  # Réduire à 60% de la taille
+    
+        # Pour chaque pic, créer une hitbox inscrite
+        for i in range(4):
+            x_offset = (spike_width - reduced_size) / 2
+            y_offset = self.height - reduced_size * 0.8
+        
+            hitboxes.append(pygame.Rect(
+                self.x + i * spike_width + x_offset,
+                self.y + y_offset,
+                reduced_size,
+                reduced_size * 0.7
+            ))
+        return hitboxes
+
 
 class Block(MovingObject):
     def __init__(self, x):
@@ -316,7 +356,7 @@ class Block(MovingObject):
     def update(self):
         self.rect.x -= self.scroll_speed
         
-    def draw(self):
+    def draw(self, screen):
         pygame.draw.rect(screen, BLACK, self.rect)
 
 class BlockGapBlockWithSpike(MovingObject):
@@ -330,7 +370,7 @@ class BlockGapBlockWithSpike(MovingObject):
     def update(self):
         self.x -= self.scroll_speed
         
-    def draw(self):
+    def draw(self, screen):
         pygame.draw.rect(screen, BLACK, pygame.Rect(
             self.x, self.y, CUBE_SIZE, CUBE_SIZE))
         
@@ -344,33 +384,42 @@ class BlockGapBlockWithSpike(MovingObject):
         ])
         
     def get_rects(self):
-        return [
+        # Garder les rectangles des blocs tels quels
+        block_rects = [
             pygame.Rect(self.x, self.y, CUBE_SIZE, self.height),
-            pygame.Rect(self.x + CUBE_SIZE * 3, self.y, CUBE_SIZE, self.height),
-            pygame.Rect(self.x + CUBE_SIZE * 3, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
+            pygame.Rect(self.x + CUBE_SIZE * 3, self.y, CUBE_SIZE, self.height)
+        ]
+    
+        # Ajuster la hitbox du pic
+        spike_width = CUBE_SIZE
+        reduced_size = spike_width * 0.6
+        x_offset = (spike_width - reduced_size) / 2
+        y_offset = CUBE_SIZE * 0.2  # Le pic est orienté vers le haut, donc décalage différent
+    
+        spike_rect = pygame.Rect(
+            self.x + CUBE_SIZE * 3 + x_offset,
+            self.y - CUBE_SIZE + y_offset,
+            reduced_size,
+            reduced_size * 0.7
+        )
+    
+        return [*block_rects, spike_rect]
+
+
+        
+    def activate_pads(self, player):
+        pad_rects = [
+            pygame.Rect(self.x + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
+            pygame.Rect(self.x + CUBE_SIZE + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
+            pygame.Rect(self.x + CUBE_SIZE * 2 + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2)
         ]
         
-    def get_rects(self):
-        return [
-            # Ceiling spikes rects
-            pygame.Rect(self.x, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
-            pygame.Rect(self.x + CUBE_SIZE, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
-            pygame.Rect(self.x + CUBE_SIZE * 2, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
-            pygame.Rect(self.x + CUBE_SIZE * 3, self.y - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE),
-            # Pads rects
-            pygame.Rect(self.x + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
-            pygame.Rect(self.x + CUBE_SIZE + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
-            pygame.Rect(self.x + CUBE_SIZE * 2 + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2)
-        ]
+        for pad_rect in pad_rects:
+            if player.rect.colliderect(pad_rect):
+                player.velocity_y = -22
+                player.is_jumping = True
+                break
 
-    def activate_pads(self, player):
-        if player.standing_on and player.standing_on in [
-            pygame.Rect(self.x + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
-            pygame.Rect(self.x + CUBE_SIZE + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2),
-            pygame.Rect(self.x + CUBE_SIZE * 2 + CUBE_SIZE/2, self.y + CUBE_SIZE, CUBE_SIZE/2, CUBE_SIZE/2)
-        ]:
-            player.velocity_y = -22
-            player.is_jumping = True
 class DoubleBlockPillar(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -416,20 +465,20 @@ class DoubleBlockPillar(MovingObject):
                 CUBE_SIZE
             ))
         
-    def update(self):
+    def update(self, current_speed=INITIAL_SCROLL_SPEED):  # Ajout du paramètre current_speed avec valeur par défaut
         self.x -= self.scroll_speed
         # Mettre à jour les positions de tous les blocs
         for i, rect in enumerate(self.block_rects):
             if i < 2:  # Premier pilier (2 blocs)
                 rect.x = self.x
             elif i < 6:  # Deuxième pilier (4 blocs)
-                rect.x = self.x + CUBE_SIZE * 5 + current_speed
+                rect.x = self.x + CUBE_SIZE * (5 + current_speed - 6)
             elif i < 12:  # Troisième pilier (6 blocs)
-                rect.x = self.x + CUBE_SIZE * 10 + current_speed
+                rect.x = self.x + CUBE_SIZE * (10 + current_speed - 6)
             else:  # Quatrième pilier (4 blocs)
-                rect.x = self.x + CUBE_SIZE * 13 + current_speed
+                rect.x = self.x + CUBE_SIZE * (13 + current_speed - 5)
         
-    def draw(self):
+    def draw(self, screen):
         # Dessiner tous les blocs
         for rect in self.block_rects:
             pygame.draw.rect(screen, BLACK, rect)
@@ -501,7 +550,7 @@ class BouncingObstacle(MovingObject):
         self.rect.x = self.x
         self.rect.y = self.y
         
-    def draw(self):
+    def draw(self, screen):
         # Sauvegarder la surface originale
         surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         
