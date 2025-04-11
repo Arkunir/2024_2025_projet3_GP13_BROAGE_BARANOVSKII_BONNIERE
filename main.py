@@ -265,7 +265,12 @@ def main():
                         for game_obj in game_objects:
                             game_obj.set_speed(current_speed)
                 elif score == speed_threshold_random:
+                    # Modification: s'assurer que la nouvelle vitesse est différente de la vitesse actuelle
                     new_speed = random.randint(9, 11)
+                    if score >= 100:  # À partir du score 100, on s'assure que la vitesse change
+                        while new_speed == current_speed:
+                            new_speed = random.randint(9, 11)
+                    
                     current_speed = new_speed
                     print(f"Passage à la vitesse aléatoire {new_speed} à {score} points!")
                     for game_obj in game_objects:
@@ -273,7 +278,12 @@ def main():
                     next_random_change = score + random.randint(25, 50)
                     print(f"Prochain changement à {next_random_change} points")
                 elif score >= speed_threshold_random and score == next_random_change:
+                    # Modification: s'assurer que la nouvelle vitesse est différente de la vitesse actuelle
                     new_speed = random.randint(9, 11)
+                    if score >= 100:  # À partir du score 100, on s'assure que la vitesse change
+                        while new_speed == current_speed:
+                            new_speed = random.randint(9, 11)
+                    
                     current_speed = new_speed
                     print(f"Nouveau changement à la vitesse aléatoire {new_speed} à {score} points!")
                     for game_obj in game_objects:
