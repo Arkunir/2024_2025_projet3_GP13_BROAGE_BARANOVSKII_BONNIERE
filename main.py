@@ -13,6 +13,8 @@ from klass import Block
 from klass import BlockGapBlockWithSpike
 from klass import Button
 from klass import BouncingObstacle
+from klass import DoubleBlockPillar
+
 WIDTH, HEIGHT = 800, 600
 FPS = 60
 GRAVITY = 1
@@ -37,10 +39,20 @@ def main():
     score = 0
     last_object = pygame.time.get_ticks()
     
+    # Distances minimales entre obstacles en fonction de la vitesse
+    min_obstacle_distances = {
+        6: 150,  # Espacement minimal à vitesse 6
+        7: 175,  # Espacement minimal à vitesse 7
+        8: 225,  # Espacement minimal à vitesse 8
+        9: 250,  # Espacement minimal à vitesse 9
+        10: 275, # Espacement minimal à vitesse 10
+        11: 300  # Espacement minimal à vitesse 11
+    }
+    
     obstacle_intervals = {
         6: [800, 1400],
         7: [900, 1600],
-        8: [1100, 1800],
+        8: [1200, 1800],
         9: [1300, 2000],
         10: [1400, 2100],
         11: [1500, 2200]
@@ -85,8 +97,35 @@ def main():
                 if not player.is_jumping:
                     player.jump()
                 space_pressed = True
+
+        # Vérifier s'il faut créer un nouvel obstacle
+        can_spawn_obstacle = True
+        min_distance = min_obstacle_distances[current_speed]
         
-        if current_time - last_object > object_interval:
+        # Si des obstacles existent déjà, vérifier l'espacement
+        if game_objects:
+            last_obstacle = game_objects[-1]
+            
+            # Calculer la position de fin du dernier obstacle
+            if isinstance(last_obstacle, Obstacle):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, Block):
+                last_obstacle_right = last_obstacle.rect.right
+            elif isinstance(last_obstacle, DoublePikes) or isinstance(last_obstacle, TriplePikes) or isinstance(last_obstacle, QuadruplePikes):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, BouncingObstacle):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, DoubleBlockPillar):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, BlockGapBlockWithSpike):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
+            
+            # Vérifier si l'espace est suffisant pour un nouvel obstacle
+            if WIDTH - last_obstacle_right < min_distance:
+                can_spawn_obstacle = False
+        
+        # Créer un nouvel obstacle si les conditions sont remplies
+        if can_spawn_obstacle and current_time - last_object > object_interval:
             if current_speed == 6:
                 choice = random.random()
                 if choice < 0.6:
@@ -95,18 +134,20 @@ def main():
                     obj = Block(WIDTH)
             elif current_speed == 7:
                 choice = random.random()
-                if choice < 0.6:
+                if choice < 0.3:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.8:
+                elif choice < 0.6:
                     obj = Block(WIDTH)
                 else:
                     obj = DoublePikes(WIDTH)
             elif current_speed == 8:
                 choice = random.random()
-                if choice < 0.3:
+                if choice < 0.1:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.5:
+                elif choice < 0.2:
                     obj = DoublePikes(WIDTH)
+                elif choice < 0.5:
+                    obj = DoubleBlockPillar(WIDTH)
                 elif choice < 0.7:
                     obj = BlockGapBlockWithSpike(WIDTH)
                 else:
@@ -186,6 +227,14 @@ def main():
                         print("Game Over! Collision avec un quadruple pic")
                         running = False
                         break
+                    
+            elif isinstance(obj, DoubleBlockPillar):
+                for rect in obj.get_rects():
+                    if player.rect.colliderect(rect):
+                        player.is_alive = False
+                        print("Game Over! Collision avec un pilier de blocs")
+                        running = False
+                        break
             
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
@@ -193,6 +242,7 @@ def main():
                 (isinstance(obj, TriplePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, QuadruplePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, BouncingObstacle) and obj.x + obj.width < 0) or
+                (isinstance(obj, DoubleBlockPillar) and obj.x + obj.width < 0) or
                 (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
                 game_objects.remove(obj)
                 score += 1
@@ -255,7 +305,7 @@ def main():
         clock.tick(FPS)
     
     show_menu()
-    show_menu()
+
 def show_menu():
     button_color = (200, 200, 200)
     hover_color = (150, 150, 150)

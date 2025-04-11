@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 from testiacode import ai_test_play
+from main import main
 pygame.init()
 
 WIDTH, HEIGHT = 800, 600
@@ -30,9 +31,11 @@ class Player:
         self.is_alive = True
         self.standing_on = None
         self.just_landed = False
+        self.was_on_ground = True  # Pour suivre si le joueur était au sol à la frame précédente
 
     def update(self, game_objects):
         was_jumping = self.is_jumping
+        previous_standing = self.standing_on is not None or self.rect.y >= GROUND_HEIGHT - CUBE_SIZE
         
         self.velocity_y += GRAVITY
         
@@ -40,6 +43,7 @@ class Player:
         
         self.rect.y += self.velocity_y
         
+        previous_standing_on = self.standing_on
         self.standing_on = None
         
         self.just_landed = False
@@ -93,6 +97,28 @@ class Player:
                         self.is_alive = False
                         print("Game Over! Collision latérale avec un bloc de la structure")
             
+            elif isinstance(obj, DoubleBlockPillar):
+                # Gestion des collisions avec le pilier
+                for pillar_rect in obj.get_rects():
+                    if (old_y + CUBE_SIZE <= pillar_rect.top and 
+                        self.rect.y + CUBE_SIZE >= pillar_rect.top and
+                        self.rect.right > pillar_rect.left and
+                        self.rect.left < pillar_rect.right):
+                        
+                        self.rect.bottom = pillar_rect.top
+                        self.velocity_y = 0
+                        
+                        if self.is_jumping:
+                            self.just_landed = True
+                        
+                        self.is_jumping = False
+                        self.standing_on = obj
+                        
+                    elif (self.rect.colliderect(pillar_rect) and 
+                          not (old_y + CUBE_SIZE <= pillar_rect.top)):
+                        self.is_alive = False
+                        print("Game Over! Collision latérale avec un pilier de blocs")
+            
             # Ajout de la détection des collisions avec BouncingObstacle
             elif isinstance(obj, BouncingObstacle):
                 if self.rect.colliderect(obj.rect):
@@ -112,14 +138,23 @@ class Player:
                             print("Game Over! Collision avec un obstacle")
                             break
         
+        on_ground = False
         if self.rect.y >= GROUND_HEIGHT - CUBE_SIZE and not self.standing_on:
             self.rect.y = GROUND_HEIGHT - CUBE_SIZE
             self.velocity_y = 0
+            on_ground = True
             
             if self.is_jumping:
                 self.just_landed = True
             
             self.is_jumping = False
+            
+        # Si le joueur n'est ni sur un objet ni sur le sol, il est considéré comme sautant
+        if not self.standing_on and not on_ground:
+            self.is_jumping = True
+            
+        # Conserve l'état précédent pour la frame suivante
+        self.was_on_ground = self.standing_on is not None or on_ground
             
     def jump(self):
         if not self.is_jumping:
@@ -128,6 +163,7 @@ class Player:
             
     def draw(self):
         pygame.draw.rect(screen, BLUE, self.rect)
+
         
 class MovingObject:
     def __init__(self, x):
@@ -335,7 +371,78 @@ class BlockGapBlockWithSpike(MovingObject):
         ]:
             player.velocity_y = -22
             player.is_jumping = True
-
+class DoubleBlockPillar(MovingObject):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+        self.width = CUBE_SIZE * 20  # Largeur totale mise à jour: 2 + 2 + 4 + 2 + 6 + 2 + 4
+        
+        # Liste pour stocker tous les rectangles de blocs
+        self.block_rects = []
+        
+        # Premier pilier - 2 blocs de hauteur
+        for i in range(2):
+            self.block_rects.append(pygame.Rect(
+                self.x, 
+                GROUND_HEIGHT - CUBE_SIZE * (i + 1), 
+                CUBE_SIZE, 
+                CUBE_SIZE
+            ))
+        
+        # Deuxième pilier - 4 blocs de hauteur (après 2 espaces vides)
+        for i in range(4):
+            self.block_rects.append(pygame.Rect(
+                self.x + CUBE_SIZE * 3,  # Position x: 2 (premier pilier) + 1 (espaces)
+                GROUND_HEIGHT - CUBE_SIZE * (i + 1), 
+                CUBE_SIZE, 
+                CUBE_SIZE
+            ))
+        
+        # Troisième pilier - 6 blocs de hauteur (après 2 espaces vides supplémentaires)
+        for i in range(6):
+            self.block_rects.append(pygame.Rect(
+                self.x + CUBE_SIZE * 6,  # Position x: 2 + 1 + 1 + 4 - 2
+                GROUND_HEIGHT - CUBE_SIZE * (i + 1), 
+                CUBE_SIZE, 
+                CUBE_SIZE
+            ))
+        
+        # Quatrième pilier - 4 blocs de hauteur (même que le 2ème pilier, après 2 espaces vides)
+        for i in range(4):
+            self.block_rects.append(pygame.Rect(
+                self.x + CUBE_SIZE * 9,  # Position x: 2 + 1 + 1 + 4 - 2 + 1 + 6 - 3
+                GROUND_HEIGHT - CUBE_SIZE * (i + 1), 
+                CUBE_SIZE, 
+                CUBE_SIZE
+            ))
+        
+    def update(self):
+        self.x -= self.scroll_speed
+        # Mettre à jour les positions de tous les blocs
+        for i, rect in enumerate(self.block_rects):
+            if i < 2:  # Premier pilier (2 blocs)
+                rect.x = self.x
+            elif i < 6:  # Deuxième pilier (4 blocs)
+                rect.x = self.x + CUBE_SIZE * 5 + current_speed
+            elif i < 12:  # Troisième pilier (6 blocs)
+                rect.x = self.x + CUBE_SIZE * 10 + current_speed
+            else:  # Quatrième pilier (4 blocs)
+                rect.x = self.x + CUBE_SIZE * 13 + current_speed
+        
+    def draw(self):
+        # Dessiner tous les blocs
+        for rect in self.block_rects:
+            pygame.draw.rect(screen, BLACK, rect)
+    
+    # Propriété pour la compatibilité avec le système de collision du joueur
+    @property
+    def rect(self):
+        # On retourne le premier rectangle pour les collisions standards
+        return self.block_rects[0] if self.block_rects else pygame.Rect(self.x, 0, 0, 0)
+        
+    def get_rects(self):
+        return self.block_rects
+        
 class Button:
     def __init__(self, text, x, y, width, height, color, hover_color):
         self.text = text
