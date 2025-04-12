@@ -159,12 +159,14 @@ def main():
                     obj = Obstacle(WIDTH)
                 elif choice < 0.16:
                     obj = Block(WIDTH)
-                elif choice < 0.36:
+                elif choice < 0.24:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.66:
+                elif choice < 0.5:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.96:
+                elif choice < 0.75:
                     obj = TriplePikes(WIDTH)
+                elif choice < 0.96:
+                    obj = DoubleBlockPillar(WIDTH)
                 else:
                     obj = QuadruplePikes(WIDTH)
             elif current_speed >= 10:
