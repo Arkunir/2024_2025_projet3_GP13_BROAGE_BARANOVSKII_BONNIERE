@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import os
 
 WIDTH, HEIGHT = 800, 600
 FPS = 60
@@ -25,6 +26,62 @@ class Player:
         self.standing_on = None
         self.just_landed = False
         self.was_on_ground = True  # Pour suivre si le joueur était au sol à la frame précédente
+        
+        # Charger les skins disponibles
+        self.skins = self.load_skins()
+        self.current_skin_index = 0
+        self.image = self.skins[self.current_skin_index] if self.skins else None
+        
+        # Ajouter des attributs pour la rotation
+        self.rotation_angle = 0
+        self.rotation_speed = -9  # Degrés par frame
+        self.total_rotation = 0  # Pour suivre la rotation totale
+        self.rotating = False
+    
+    def load_skins(self):
+        skins = []
+        skins_dir = "skins"  # Dossier contenant les images des skins
+        
+        # Vérifier si le dossier existe
+        if not os.path.exists(skins_dir):
+            os.makedirs(skins_dir)
+            print(f"Dossier {skins_dir} créé. Veuillez y ajouter des images de skins.")
+            return skins
+            
+        # Charger toutes les images du dossier skins
+        for filename in os.listdir(skins_dir):
+            if filename.endswith((".png", ".jpg", ".jpeg")):
+                path = os.path.join(skins_dir, filename)
+                try:
+                    # Charger l'image
+                    image = pygame.image.load(path).convert_alpha()
+                    # Redimensionner à une taille plus grande que CUBE_SIZE (1.5x)
+                    new_size = int(CUBE_SIZE * 4)
+                    image = pygame.transform.scale(image, (new_size, new_size))
+                    skins.append(image)
+                    print(f"Skin chargé: {filename}")
+                except pygame.error:
+                    print(f"Impossible de charger l'image: {filename}")
+        
+        # Si aucun skin n'est trouvé, ajouter un skin par défaut (un carré bleu)
+        if not skins:
+            print("Aucun skin trouvé, utilisation du skin par défaut")
+            default_size = int(CUBE_SIZE * 4)
+            default_skin = pygame.Surface((default_size, default_size), pygame.SRCALPHA)
+            pygame.draw.rect(default_skin, BLUE, (0, 0, default_size, default_size))
+            skins.append(default_skin)
+            
+        return skins
+    
+    def change_skin_randomly(self):
+        if len(self.skins) > 1:
+            # Choisir un skin différent du skin actuel
+            new_index = self.current_skin_index
+            while new_index == self.current_skin_index:
+                new_index = random.randint(0, len(self.skins) - 1)
+            self.current_skin_index = new_index
+            self.image = self.skins[self.current_skin_index]
+            print(f"Skin changé pour l'index {self.current_skin_index}")
 
     def update(self, game_objects):
         was_jumping = self.is_jumping
@@ -148,15 +205,58 @@ class Player:
             
         # Conserve l'état précédent pour la frame suivante
         self.was_on_ground = self.standing_on is not None or on_ground
+        
+        # Mettre à jour la rotation si en train de sauter
+        if self.rotating:
+            self.total_rotation += self.rotation_speed
+            self.rotation_angle = self.total_rotation % 360
+            
+            # Arrêter la rotation si on a fait un tour complet et qu'on est au sol
+            if self.total_rotation >= 90 and (self.standing_on is not None or self.rect.y >= GROUND_HEIGHT - CUBE_SIZE):
+                self.rotating = False
+                self.rotation_angle = 0
+                self.total_rotation = 0
             
     def jump(self):
         if not self.is_jumping:
             self.velocity_y = JUMP_STRENGTH
             self.is_jumping = True
+            # Initialiser la rotation au début du saut
+            self.rotating = True
+            self.total_rotation = 0
             
     def draw(self, screen):
-        pygame.draw.rect(screen, BLUE, self.rect)
-
+        if self.image:
+            # Créer une copie de l'image pour la rotation
+            image_to_draw = self.image
+            
+            # Appliquer la rotation si nécessaire
+            if self.rotating:
+                image_to_draw = pygame.transform.rotate(self.image, self.rotation_angle)
+            
+            # Calculer le décalage pour centrer l'image plus grande sur la hitbox
+            image_width = image_to_draw.get_width()
+            image_height = image_to_draw.get_height()
+            offset_x = (image_width - CUBE_SIZE) // 2
+            offset_y = (image_height - CUBE_SIZE) // 2
+            
+            # Dessiner l'image centrée sur la hitbox du joueur
+            screen.blit(image_to_draw, (self.rect.x - offset_x, self.rect.y - offset_y))
+        else:
+            # Fallback sur le rectangle bleu original
+            if self.rotating:
+                # Créer une surface pour le cube
+                surface = pygame.Surface((CUBE_SIZE, CUBE_SIZE), pygame.SRCALPHA)
+                pygame.draw.rect(surface, BLUE, (0, 0, CUBE_SIZE, CUBE_SIZE))
+                
+                # Appliquer la rotation
+                rotated_surface = pygame.transform.rotate(surface, self.rotation_angle)
+                rotated_rect = rotated_surface.get_rect(center=(self.rect.x + CUBE_SIZE/2, self.rect.y + CUBE_SIZE/2))
+                
+                # Afficher sur l'écran
+                screen.blit(rotated_surface, rotated_rect)
+            else:
+                pygame.draw.rect(screen, BLUE, self.rect)
         
 class MovingObject:
     def __init__(self, x):
@@ -492,67 +592,341 @@ class DoubleBlockPillar(MovingObject):
     def get_rects(self):
         return self.block_rects
 
-class YellowOrb(MovingObject):
+class TriplePikesWithOrb(MovingObject):
     def __init__(self, x):
         super().__init__(x)
         self.x = x
-        self.y = GROUND_HEIGHT - CUBE_SIZE * 2  # Position au-dessus du sol
-        self.width = CUBE_SIZE // 2
-        self.height = CUBE_SIZE // 2
-        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
-        self.activated = False  # Pour éviter les activations multiples
-        self.active_timer = 0   # Pour gérer l'animation d'activation
-        self.pulse_size = 0     # Pour l'effet de pulsation
-        self.pulse_alpha = 0    # Pour la transparence de la pulsation
+        self.y = GROUND_HEIGHT - CUBE_SIZE
+        self.width = CUBE_SIZE * 3
+        self.height = CUBE_SIZE
+        self.orb_activated = False
+        self.orb_active_timer = 0
+        self.orb_pulse_size = 0
+        self.orb_pulse_alpha = 0
         
     def update(self):
         self.x -= self.scroll_speed
-        self.rect.x = self.x
-        self.rect.y = self.y
         
-        # Gestion de l'animation d'activation
-        if self.activated:
-            self.active_timer += 1
-            self.pulse_size += 2
-            self.pulse_alpha = max(0, 255 - self.pulse_size * 5)
+        # Gestion de l'animation d'activation de l'orbe
+        if self.orb_activated:
+            self.orb_active_timer += 1
+            self.orb_pulse_size += 2
+            self.orb_pulse_alpha = max(0, 255 - self.orb_pulse_size * 5)
             
             # Réinitialiser après l'animation
-            if self.active_timer > 30:
-                self.activated = False
-                self.active_timer = 0
-                self.pulse_size = 0
-                self.pulse_alpha = 0
+            if self.orb_active_timer > 30:
+                self.orb_activated = False
+                self.orb_active_timer = 0
+                self.orb_pulse_size = 0
+                self.orb_pulse_alpha = 0
         
     def draw(self, screen):
+        # Dessiner les 3 pics au sol
+        pygame.draw.polygon(screen, RED, [
+            (self.x, self.y + self.height),
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE/2, self.y)
+        ])
+        
+        pygame.draw.polygon(screen, RED, [
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*1.5, self.y)
+        ])
+        
+        pygame.draw.polygon(screen, RED, [
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*3, self.y + self.height),
+            (self.x + CUBE_SIZE*2.5, self.y)
+        ])
+        
+        # Position de l'orbe: 2 blocs au-dessus du pic central
+        orb_x = self.x + CUBE_SIZE * 1.5 - CUBE_SIZE // 4  # Centré sur le pic du milieu
+        orb_y = self.y - CUBE_SIZE * 2  # 2 blocs au-dessus
+        orb_width = CUBE_SIZE // 2
+        orb_height = CUBE_SIZE // 2
+        
         # Dessiner l'effet de pulsation si activé
-        if self.activated:
-            pulse_surface = pygame.Surface((self.width + self.pulse_size, self.height + self.pulse_size), pygame.SRCALPHA)
-            pulse_color = (255, 255, 0, self.pulse_alpha)  # Jaune avec transparence
+        if self.orb_activated:
+            pulse_surface = pygame.Surface((orb_width + self.orb_pulse_size, orb_height + self.orb_pulse_size), pygame.SRCALPHA)
+            pulse_color = (255, 255, 0, self.orb_pulse_alpha)  # Jaune avec transparence
             pygame.draw.circle(pulse_surface, pulse_color, 
                               (pulse_surface.get_width() // 2, pulse_surface.get_height() // 2), 
-                              (self.width + self.pulse_size) // 2)
+                              (orb_width + self.orb_pulse_size) // 2)
             screen.blit(pulse_surface, 
-                       (self.x - self.pulse_size // 2, self.y - self.pulse_size // 2))
+                       (orb_x - self.orb_pulse_size // 2, orb_y - self.orb_pulse_size // 2))
         
         # Dessiner l'orbe jaune
         pygame.draw.circle(screen, (255, 255, 0), 
-                          (self.x + self.width // 2, self.y + self.height // 2), 
-                          self.width // 2)
+                          (orb_x + orb_width // 2, orb_y + orb_height // 2), 
+                          orb_width // 2)
         
-        # Ajouter un petit détail à l'intérieur
-        inner_color = (200, 200, 0) if not self.activated else (255, 255, 255)
+        # Ajouter un petit détail à l'intérieur de l'orbe
+        inner_color = (200, 200, 0) if not self.orb_activated else (255, 255, 255)
         pygame.draw.circle(screen, inner_color, 
-                          (self.x + self.width // 2, self.y + self.height // 2), 
-                          self.width // 4)
+                          (orb_x + orb_width // 2, orb_y + orb_height // 2), 
+                          orb_width // 4)
+        
+    def get_rects(self):
+        # Hitboxes pour les 3 pics
+        hitboxes = []
+        spike_width = self.width / 3  # Largeur d'un pic
+        reduced_size = spike_width * 0.6  # Réduire à 60% de la taille
+    
+        # Pour chaque pic, créer une hitbox inscrite
+        for i in range(3):
+            x_offset = (spike_width - reduced_size) / 2
+            y_offset = self.height - reduced_size * 0.8
+        
+            hitboxes.append(pygame.Rect(
+                self.x + i * spike_width + x_offset,
+                self.y + y_offset,
+                reduced_size,
+                reduced_size * 0.7
+            ))
+        
+        # Ajouter la hitbox de l'orbe
+        orb_width = CUBE_SIZE // 2
+        orb_x = self.x + CUBE_SIZE * 1.5 - orb_width // 2  # Centré sur le pic du milieu
+        orb_y = self.y - CUBE_SIZE * 2  # 2 blocs au-dessus
+        
+        orb_rect = pygame.Rect(orb_x, orb_y, orb_width, orb_width)
+        hitboxes.append(orb_rect)
+        
+        return hitboxes
     
     def check_activation(self, player, keys):
+        # Obtenir la hitbox de l'orbe (le 4ème rectangle dans la liste)
+        orb_rect = self.get_rects()[3]
+        
         # Vérifier si le joueur est en contact avec l'orbe et appuie sur espace
-        if not self.activated and player.rect.colliderect(self.rect) and keys[pygame.K_SPACE]:
-            self.activated = True
-            player.velocity_y = JUMP_STRENGTH * 1.2  # Saut plus puissant que le saut normal
+        if not self.orb_activated and player.rect.colliderect(orb_rect) and keys[pygame.K_SPACE]:
+            self.orb_activated = True
+            player.velocity_y = JUMP_STRENGTH * 1  # Saut aussi puissant que le saut normal
             player.is_jumping = True
             return True
         return False
+
+class JumpPad(MovingObject):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+        self.y = GROUND_HEIGHT - CUBE_SIZE // 3  # Un tiers de la hauteur d'un cube
+        self.width = CUBE_SIZE
+        self.height = CUBE_SIZE // 3
+        self.boost_strength = -25
+        self.activated = False
+        self.activation_timer = 0
+        self.activation_duration = 10
+        
+    def update(self):
+        self.x -= self.scroll_speed
+        
+        # Gestion de l'animation d'activation
+        if self.activated:
+            self.activation_timer += 1
+            if self.activation_timer >= self.activation_duration:
+                self.activated = False
+                self.activation_timer = 0
+    
+    def draw(self, screen):
+        # Simple rectangle jaune
+        base_color = (255, 255, 0)  # Jaune
+        
+        # Si activé, changer brièvement la couleur
+        if self.activated:
+            base_color = (255, 255, 150)  # Jaune plus clair pendant l'activation
+        
+        # Dessiner un simple rectangle jaune
+        pygame.draw.rect(screen, base_color, pygame.Rect(
+            self.x, self.y, self.width, self.height))
+        
+        # Effet de pulsation original
+        if self.activated:
+            # Créer un effet de pulsation comme dans la version originale
+            pulse_height = (self.activation_timer / self.activation_duration) * CUBE_SIZE * 2
+            pulse_alpha = max(0, 255 - (pulse_height * 2))
+            
+            # Surface avec transparence pour l'effet
+            pulse_surface = pygame.Surface((self.width, pulse_height), pygame.SRCALPHA)
+            pulse_color = (255, 255, 0, pulse_alpha)  # Jaune avec transparence
+            
+            # Dessiner l'effet sur la surface
+            pygame.draw.polygon(pulse_surface, pulse_color, [
+                (0, pulse_height),
+                (self.width, pulse_height),
+                (self.width//2, 0)
+            ])
+            
+            # Afficher l'effet au-dessus du pad
+            screen.blit(pulse_surface, (self.x, self.y - pulse_height))
+    
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+    
+    def activate(self, player):
+        if not self.activated:
+            self.activated = True
+            player.velocity_y = self.boost_strength
+            player.is_jumping = True
+            return True
+        return False
+
+class QuintuplePikesWithJumpPad(MovingObject):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+        self.y = GROUND_HEIGHT - CUBE_SIZE
+        self.width = CUBE_SIZE * 5
+        self.height = CUBE_SIZE * 4  # Hauteur totale
+        self.jump_pad_activated = False
+        self.activation_timer = 0
+        self.activation_duration = 10
+        self.boost_strength = -25  # Force du saut
+        
+    def update(self):
+        self.x -= self.scroll_speed
+        
+        # Gestion de l'animation d'activation du jumppad
+        if self.jump_pad_activated:
+            self.activation_timer += 1
+            if self.activation_timer >= self.activation_duration:
+                self.jump_pad_activated = False
+                self.activation_timer = 0
+        
+    def draw(self, screen):
+        # Position des blocs et des pics à 4 blocs du sol
+        spike_y = self.y - CUBE_SIZE * 4
+        
+        # D'abord dessiner les blocs
+        for i in range(5):
+            pygame.draw.rect(screen, BLACK, pygame.Rect(
+                self.x + i * CUBE_SIZE, 
+                spike_y - CUBE_SIZE,  # Positionnés juste au-dessus des pics
+                CUBE_SIZE, 
+                CUBE_SIZE
+            ))
+        
+        # Ensuite dessiner les pics orientés vers le bas
+        for i in range(5):
+            pygame.draw.polygon(screen, RED, [
+                (self.x + i * CUBE_SIZE, spike_y),  # Point en haut à gauche
+                (self.x + (i+1) * CUBE_SIZE, spike_y),  # Point en haut à droite
+                (self.x + (i+0.5) * CUBE_SIZE, spike_y + CUBE_SIZE)  # Point en bas (pointe)
+            ])
+        
+        # Dessiner le jumppad sous le 3ème pic
+        pad_x = self.x + CUBE_SIZE * 2  # Position du 3ème pic
+        pad_y = GROUND_HEIGHT - CUBE_SIZE // 3  # Hauteur du jumppad
+        pad_width = CUBE_SIZE
+        pad_height = CUBE_SIZE // 3
+        
+        # Couleur du jumppad (jaune ou jaune clair si activé)
+        pad_color = (255, 255, 150) if self.jump_pad_activated else (255, 255, 0)
+        
+        # Dessiner le jumppad
+        pygame.draw.rect(screen, pad_color, pygame.Rect(
+            pad_x, pad_y, pad_width, pad_height))
+        
+        # Effet d'activation du jumppad
+        if self.jump_pad_activated:
+            # Effet de pulsation
+            pulse_height = (self.activation_timer / self.activation_duration) * CUBE_SIZE * 2
+            pulse_alpha = max(0, 255 - (pulse_height * 2))
+            
+            # Surface avec transparence pour l'effet
+            pulse_surface = pygame.Surface((pad_width, pulse_height), pygame.SRCALPHA)
+            pulse_color = (255, 255, 0, pulse_alpha)  # Jaune avec transparence
+            
+            # Dessiner l'effet sur la surface
+            pygame.draw.polygon(pulse_surface, pulse_color, [
+                (0, pulse_height),
+                (pad_width, pulse_height),
+                (pad_width//2, 0)
+            ])
+            
+            # Afficher l'effet au-dessus du pad
+            screen.blit(pulse_surface, (pad_x, pad_y - pulse_height))
+    
+    def get_rects(self):
+        hitboxes = []
+        spike_width = CUBE_SIZE
+        reduced_size = spike_width * 0.6  # Réduire à 60% de la taille
+        spike_y = self.y - CUBE_SIZE * 4
+        
+        # Ajouter des hitboxes pour les blocs
+        for i in range(5):
+            hitboxes.append(pygame.Rect(
+                self.x + i * CUBE_SIZE,
+                spike_y - CUBE_SIZE,  # Position des blocs
+                CUBE_SIZE,
+                CUBE_SIZE
+            ))
+        
+        # Hitbox pour chaque pic
+        for i in range(5):
+            x_offset = (spike_width - reduced_size) / 2
+            y_offset = CUBE_SIZE * 0.3
+            
+            hitboxes.append(pygame.Rect(
+                self.x + i * spike_width + x_offset,
+                spike_y + y_offset,
+                reduced_size,
+                reduced_size * 0.7
+            ))
+        
+        # Hitbox pour le jumppad
+        hitboxes.append(pygame.Rect(
+            self.x + CUBE_SIZE * 2,
+            GROUND_HEIGHT - CUBE_SIZE // 3,
+            CUBE_SIZE,
+            CUBE_SIZE // 3
+        ))
+        
+        return hitboxes
+    
+    def check_collision(self, player):
+        rects = self.get_rects()
+        
+        # Vérifier la collision avec le jumppad (dernier rectangle)
+        jump_pad_rect = rects[-1]
+        if player.rect.colliderect(jump_pad_rect):
+            self.activate_jump_pad(player)
+            return False  # Pas une collision mortelle
+        
+        # Vérifier les collisions avec les pics (5 rectangles après les 5 blocs)
+        for i in range(5, 10):  # Indices 5 à 9 sont les pics
+            if player.rect.colliderect(rects[i]):
+                return True  # Collision mortelle
+        
+        # Si le joueur touche un bloc, c'est une surface sur laquelle il peut se tenir
+        # Nous n'avons pas besoin de traiter ces collisions comme mortelles
+                
+        return False  # Pas de collision mortelle
+            
+    def activate_jump_pad(self, player):
+        if not self.jump_pad_activated:
+            self.jump_pad_activated = True
+            player.velocity_y = self.boost_strength
+            player.is_jumping = True
+            return True
+        return False
+        
+    def check_collision(self, player):
+        rects = self.get_rects()
+        
+        # Vérifier la collision avec le jumppad (dernier rectangle)
+        jump_pad_rect = rects[-1]
+        if player.rect.colliderect(jump_pad_rect):
+            self.activate_jump_pad(player)
+            return False  # Pas une collision mortelle
+        
+        # Vérifier les collisions avec les pics (mortelles)
+        for i in range(5):  # Les 5 premiers rectangles sont les pics
+            if player.rect.colliderect(rects[i]):
+                return True  # Collision mortelle
+                
+        return False  # Pas de collision
 
 class Button:
     def __init__(self, text, x, y, width, height, color, hover_color):

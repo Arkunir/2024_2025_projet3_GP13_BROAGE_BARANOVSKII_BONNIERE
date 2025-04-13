@@ -1,19 +1,21 @@
 import pygame
 import sys
 import random
+import os
 from testiacode import ai_test_play
 from klass import Button
 from klass import Player
 from klass import MovingObject
 from klass import Obstacle
 from klass import DoublePikes
-from klass import TriplePikes
+from klass import TriplePikes   
 from klass import QuadruplePikes
 from klass import Block
 from klass import BlockGapBlockWithSpike
 from klass import BouncingObstacle
 from klass import DoubleBlockPillar
-from klass import YellowOrb
+from klass import TriplePikesWithOrb
+from klass import JumpPad
 
 pygame.init()
 
@@ -63,6 +65,7 @@ def main():
     object_interval = random.randint(*obstacle_intervals[INITIAL_SCROLL_SPEED])
     
     current_speed = INITIAL_SCROLL_SPEED
+    previous_speed = current_speed  # Pour détecter les changements de vitesse
     
     space_pressed = False
     
@@ -113,7 +116,7 @@ def main():
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, Block):
                 last_obstacle_right = last_obstacle.rect.right
-            elif isinstance(last_obstacle, DoublePikes) or isinstance(last_obstacle, TriplePikes) or isinstance(last_obstacle, QuadruplePikes):
+            elif isinstance(last_obstacle, DoublePikes) or isinstance(last_obstacle, TriplePikes) or isinstance(last_obstacle, QuadruplePikes) or isinstance(last_obstacle, TriplePikesWithOrb):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, BouncingObstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
@@ -121,7 +124,7 @@ def main():
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, BlockGapBlockWithSpike):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
-            elif isinstance(last_obstacle, YellowOrb):
+            elif isinstance(last_obstacle, JumpPad):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             
             # Vérifier si l'espace est suffisant pour un nouvel obstacle
@@ -134,20 +137,20 @@ def main():
                 choice = random.random()
                 if choice < 0.5:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.8:
-                    obj = Block(WIDTH)
+                elif choice < 0.75:
+                    obj = JumpPad(WIDTH)
                 else:
-                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
+                    obj = Block(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed == 7:
                 choice = random.random()
                 if choice < 0.3:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.6:
                     obj = Block(WIDTH)
-                elif choice < 0.9:
+                elif choice < 0.8:
                     obj = DoublePikes(WIDTH)
                 else:
-                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
+                    obj = TriplePikesWithOrb(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed == 8:
                 choice = random.random()
                 if choice < 0.1:
@@ -158,10 +161,10 @@ def main():
                     obj = DoubleBlockPillar(WIDTH)
                 elif choice < 0.7:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.9:
+                elif choice < 0.85:
                     obj = BouncingObstacle(WIDTH)
                 else:
-                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
+                    obj = TriplePikesWithOrb(WIDTH)  # Ajout du TriplePikesWithOrb
             elif current_speed == 9:
                 choice = random.random()
                 if choice < 0.08:
@@ -172,26 +175,26 @@ def main():
                     obj = DoublePikes(WIDTH)
                 elif choice < 0.5:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.75:
+                elif choice < 0.65:
                     obj = TriplePikes(WIDTH)
-                elif choice < 0.9:
+                elif choice < 0.8:
                     obj = DoubleBlockPillar(WIDTH)
-                elif choice < 0.95:
+                elif choice < 0.9:
                     obj = QuadruplePikes(WIDTH)
                 else:
-                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
+                    obj = TriplePikesWithOrb(WIDTH)  # Ajout du TriplePikesWithOrb
             elif current_speed >= 10:
                 choice = random.random()
-                if choice < 0.5:
+                if choice < 0.4:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.8:
+                elif choice < 0.65:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.9:
+                elif choice < 0.8:
                     obj = TriplePikes(WIDTH)
-                elif choice < 0.95:
+                elif choice < 0.9:
                     obj = QuadruplePikes(WIDTH)
                 else:
-                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
+                    obj = TriplePikesWithOrb(WIDTH)  # Ajout du TriplePikesWithOrb
                 
             obj.set_speed(current_speed)
             game_objects.append(obj)
@@ -209,11 +212,21 @@ def main():
         for obj in game_objects[:]:
             obj.update()
             
-            # Gestion spécifique pour l'orbe jaune
-            if isinstance(obj, YellowOrb):
+            # Gestion spécifique pour le TriplePikesWithOrb
+            if isinstance(obj, TriplePikesWithOrb):
+                # Vérifier l'activation de l'orbe
                 obj.check_activation(player, keys)
                 
-                # Si l'orbe est hors de l'écran, le supprimer et augmenter le score
+                # Vérifier les collisions avec les pics
+                for i, rect in enumerate(obj.get_rects()):
+                    if i < 3:  # Les 3 premiers rectangles sont les pics
+                        if player.rect.colliderect(rect):
+                            player.is_alive = False
+                            print("Game Over! Collision avec un pic du TriplePikesWithOrb")
+                            running = False
+                            break
+                
+                # Si l'objet est hors de l'écran, le supprimer et augmenter le score
                 if obj.x + obj.width < 0:
                     game_objects.remove(obj)
                     score += 1
@@ -261,7 +274,14 @@ def main():
                         print("Game Over! Collision avec un pilier de blocs")
                         running = False
                         break
-            
+                    
+            elif isinstance(obj, JumpPad):
+                if (player.rect.bottom >= obj.get_rect().top and 
+                    player.rect.right > obj.get_rect().left and 
+                    player.rect.left < obj.get_rect().right):
+        
+                    obj.activate(player)  # Activer le pad et appliquer le boost
+
             # Supprimer les objets qui sortent de l'écran et augmenter le score
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
@@ -270,11 +290,14 @@ def main():
                 (isinstance(obj, QuadruplePikes) and obj.x + obj.width < 0) or
                 (isinstance(obj, BouncingObstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, DoubleBlockPillar) and obj.x + obj.width < 0) or
+                (isinstance(obj, JumpPad) and obj.x + obj.width < 0) or
                 (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
                 game_objects.remove(obj)
                 score += 1
                 
                 # Gestion des changements de vitesse en fonction du score
+                old_speed = current_speed  # Sauvegarder l'ancienne vitesse
+                
                 if score < speed_threshold_random:
                     if score == speed_threshold_7 and current_speed < 7:
                         current_speed = 7
@@ -317,6 +340,12 @@ def main():
                         game_obj.set_speed(current_speed)
                     next_random_change = score + random.randint(25, 50)
                     print(f"Prochain changement à {next_random_change} points")
+                
+                # Vérifier si la vitesse a changé
+                if current_speed != previous_speed:
+                    print(f"Changement de vitesse détecté: {previous_speed} -> {current_speed}")
+                    player.change_skin_randomly()
+                    previous_speed = current_speed
         
         screen.fill(WHITE)
         
@@ -343,7 +372,7 @@ def main():
         clock.tick(FPS)
     
     show_menu()
-
+    
 def show_menu():
     button_color = (200, 200, 200)
     hover_color = (150, 150, 150)
