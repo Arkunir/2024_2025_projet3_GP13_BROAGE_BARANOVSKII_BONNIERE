@@ -491,7 +491,69 @@ class DoubleBlockPillar(MovingObject):
         
     def get_rects(self):
         return self.block_rects
+
+class YellowOrb(MovingObject):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+        self.y = GROUND_HEIGHT - CUBE_SIZE * 2  # Position au-dessus du sol
+        self.width = CUBE_SIZE // 2
+        self.height = CUBE_SIZE // 2
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.activated = False  # Pour éviter les activations multiples
+        self.active_timer = 0   # Pour gérer l'animation d'activation
+        self.pulse_size = 0     # Pour l'effet de pulsation
+        self.pulse_alpha = 0    # Pour la transparence de la pulsation
         
+    def update(self):
+        self.x -= self.scroll_speed
+        self.rect.x = self.x
+        self.rect.y = self.y
+        
+        # Gestion de l'animation d'activation
+        if self.activated:
+            self.active_timer += 1
+            self.pulse_size += 2
+            self.pulse_alpha = max(0, 255 - self.pulse_size * 5)
+            
+            # Réinitialiser après l'animation
+            if self.active_timer > 30:
+                self.activated = False
+                self.active_timer = 0
+                self.pulse_size = 0
+                self.pulse_alpha = 0
+        
+    def draw(self, screen):
+        # Dessiner l'effet de pulsation si activé
+        if self.activated:
+            pulse_surface = pygame.Surface((self.width + self.pulse_size, self.height + self.pulse_size), pygame.SRCALPHA)
+            pulse_color = (255, 255, 0, self.pulse_alpha)  # Jaune avec transparence
+            pygame.draw.circle(pulse_surface, pulse_color, 
+                              (pulse_surface.get_width() // 2, pulse_surface.get_height() // 2), 
+                              (self.width + self.pulse_size) // 2)
+            screen.blit(pulse_surface, 
+                       (self.x - self.pulse_size // 2, self.y - self.pulse_size // 2))
+        
+        # Dessiner l'orbe jaune
+        pygame.draw.circle(screen, (255, 255, 0), 
+                          (self.x + self.width // 2, self.y + self.height // 2), 
+                          self.width // 2)
+        
+        # Ajouter un petit détail à l'intérieur
+        inner_color = (200, 200, 0) if not self.activated else (255, 255, 255)
+        pygame.draw.circle(screen, inner_color, 
+                          (self.x + self.width // 2, self.y + self.height // 2), 
+                          self.width // 4)
+    
+    def check_activation(self, player, keys):
+        # Vérifier si le joueur est en contact avec l'orbe et appuie sur espace
+        if not self.activated and player.rect.colliderect(self.rect) and keys[pygame.K_SPACE]:
+            self.activated = True
+            player.velocity_y = JUMP_STRENGTH * 1.2  # Saut plus puissant que le saut normal
+            player.is_jumping = True
+            return True
+        return False
+
 class Button:
     def __init__(self, text, x, y, width, height, color, hover_color):
         self.text = text

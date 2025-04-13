@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 from testiacode import ai_test_play
+from klass import Button
 from klass import Player
 from klass import MovingObject
 from klass import Obstacle
@@ -10,9 +11,9 @@ from klass import TriplePikes
 from klass import QuadruplePikes
 from klass import Block
 from klass import BlockGapBlockWithSpike
-from klass import Button
 from klass import BouncingObstacle
 from klass import DoubleBlockPillar
+from klass import YellowOrb
 
 pygame.init()
 
@@ -120,6 +121,8 @@ def main():
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, BlockGapBlockWithSpike):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, YellowOrb):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
             
             # Vérifier si l'espace est suffisant pour un nouvel obstacle
             if WIDTH - last_obstacle_right < min_distance:
@@ -129,18 +132,22 @@ def main():
         if can_spawn_obstacle and current_time - last_object > object_interval:
             if current_speed == 6:
                 choice = random.random()
-                if choice < 0.6:
+                if choice < 0.5:
                     obj = Obstacle(WIDTH)
-                else:
+                elif choice < 0.8:
                     obj = Block(WIDTH)
+                else:
+                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed == 7:
                 choice = random.random()
                 if choice < 0.3:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.6:
                     obj = Block(WIDTH)
-                else:
+                elif choice < 0.9:
                     obj = DoublePikes(WIDTH)
+                else:
+                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed == 8:
                 choice = random.random()
                 if choice < 0.1:
@@ -151,8 +158,10 @@ def main():
                     obj = DoubleBlockPillar(WIDTH)
                 elif choice < 0.7:
                     obj = BlockGapBlockWithSpike(WIDTH)
+                elif choice < 0.9:
+                    obj = BouncingObstacle(WIDTH)
                 else:
-                    obj = BouncingObstacle(WIDTH) 
+                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed == 9:
                 choice = random.random()
                 if choice < 0.08:
@@ -165,20 +174,24 @@ def main():
                     obj = BlockGapBlockWithSpike(WIDTH)
                 elif choice < 0.75:
                     obj = TriplePikes(WIDTH)
-                elif choice < 0.96:
+                elif choice < 0.9:
                     obj = DoubleBlockPillar(WIDTH)
-                else:
+                elif choice < 0.95:
                     obj = QuadruplePikes(WIDTH)
+                else:
+                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed >= 10:
                 choice = random.random()
                 if choice < 0.5:
                     obj = DoublePikes(WIDTH)
                 elif choice < 0.8:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.95:
+                elif choice < 0.9:
                     obj = TriplePikes(WIDTH)
-                else:
+                elif choice < 0.95:
                     obj = QuadruplePikes(WIDTH)
+                else:
+                    obj = YellowOrb(WIDTH)  # Ajout de l'orbe jaune
                 
             obj.set_speed(current_speed)
             game_objects.append(obj)
@@ -192,10 +205,20 @@ def main():
             print("Game Over! Score:", score)
             running = False
         
+        # Mettre à jour les objets du jeu et vérifier les collisions
         for obj in game_objects[:]:
             obj.update()
             
-            if isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
+            # Gestion spécifique pour l'orbe jaune
+            if isinstance(obj, YellowOrb):
+                obj.check_activation(player, keys)
+                
+                # Si l'orbe est hors de l'écran, le supprimer et augmenter le score
+                if obj.x + obj.width < 0:
+                    game_objects.remove(obj)
+                    score += 1
+            
+            elif isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
                 player.is_alive = False
                 print("Game Over! Collision avec un obstacle")
                 running = False
@@ -203,7 +226,7 @@ def main():
                 if not running:
                     break
                 
-                for pad_rect in obj.get_rects()[4:]:  # Pad rects
+                for pad_rect in obj.get_rects()[4:] if hasattr(obj, 'get_rects') and len(obj.get_rects()) > 4 else []:  # Pad rects
                     if player.rect.colliderect(pad_rect):
                         obj.activate_pads(player)
             
@@ -239,6 +262,7 @@ def main():
                         running = False
                         break
             
+            # Supprimer les objets qui sortent de l'écran et augmenter le score
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
                 (isinstance(obj, DoublePikes) and obj.x + obj.width < 0) or
@@ -250,6 +274,7 @@ def main():
                 game_objects.remove(obj)
                 score += 1
                 
+                # Gestion des changements de vitesse en fonction du score
                 if score < speed_threshold_random:
                     if score == speed_threshold_7 and current_speed < 7:
                         current_speed = 7
@@ -297,10 +322,10 @@ def main():
         
         pygame.draw.rect(screen, BLACK, (0, GROUND_HEIGHT, WIDTH, HEIGHT - GROUND_HEIGHT))
         
-        player.draw(screen)  # Correction ici: ajout du paramètre screen
+        player.draw(screen)
         
         for obj in game_objects:
-            obj.draw(screen)  # Correction ici: s'assurer que tous les objets reçoivent aussi screen
+            obj.draw(screen)
             
         font = pygame.font.SysFont(None, 36)
         score_text = font.render(f"Score: {score}", True, BLACK)
