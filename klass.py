@@ -17,6 +17,17 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0) 
 
+class MovingObject:
+    def __init__(self, x):
+        self.x = x
+        self.scroll_speed = INITIAL_SCROLL_SPEED
+        
+    def update(self):
+        self.x -= self.scroll_speed
+        
+    def set_scroll_speed(self, speed):
+        self.scroll_speed = speed
+
 class Player:
     def __init__(self):
         self.rect = pygame.Rect(100, GROUND_HEIGHT - CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)
@@ -88,66 +99,67 @@ class Player:
             self.image = self.skins[self.current_skin_index]
             print(f"Skin changé pour l'index {self.current_skin_index}")
 
-    def update(self, game_objects):
-        was_jumping = self.is_jumping
-        previous_standing = self.standing_on is not None or self.rect.y >= GROUND_HEIGHT - CUBE_SIZE
-        
-        # Appliquer la gravité selon son orientation
-        gravity_force = -GRAVITY if self.gravity_inverted else GRAVITY
-        self.velocity_y += gravity_force
-        
-        # Mettre à jour le timer d'inversion de gravité si actif
-        if self.gravity_inverted:
-            self.gravity_timer += 1
-            if self.gravity_timer >= self.gravity_duration:
-                self.invert_gravity()  # Réinitialiser la gravité à normale
-        
-        old_y = self.rect.y
-        
-        self.rect.y += self.velocity_y
-        
-        previous_standing_on = self.standing_on
-        self.standing_on = None
-        
-        self.just_landed = False
-        
-        for obj in game_objects:
-            if isinstance(obj, Block):
-                # Collision par dessus (normale ou inversée selon la gravité)
-                if not self.gravity_inverted:
-                    if (old_y + CUBE_SIZE <= obj.rect.top and 
-                        self.rect.y + CUBE_SIZE >= obj.rect.top and
-                        self.rect.right > obj.rect.left and
-                        self.rect.left < obj.rect.right):
-                        
-                        self.rect.bottom = obj.rect.top
-                        self.velocity_y = 0
-                        
-                        if self.is_jumping:
-                            self.just_landed = True
-                        
-                        self.is_jumping = False
-                        self.standing_on = obj
-                else:
-                    # En gravité inversée, on vérifie les collisions par le bas
-                    if (old_y >= obj.rect.bottom and 
-                        self.rect.y <= obj.rect.bottom and
-                        self.rect.right > obj.rect.left and
-                        self.rect.left < obj.rect.right):
-                        
-                        self.rect.top = obj.rect.bottom
-                        self.velocity_y = 0
-                        
-                        if self.is_jumping:
-                            self.just_landed = True
-                        
-                        self.is_jumping = False
-                        self.standing_on = obj
-                
-                # Collision latérale - seulement si ce n'est pas une collision verticale
-                elif self.rect.colliderect(obj.rect):
-                    self.is_alive = False
-                    print("Game Over! Collision latérale avec un bloc")
+def update(self, game_objects):
+    was_jumping = self.is_jumping
+    previous_standing = self.standing_on is not None or self.rect.y >= GROUND_HEIGHT - CUBE_SIZE
+    
+    # Appliquer la gravité selon son orientation
+    gravity_force = -GRAVITY if self.gravity_inverted else GRAVITY
+    self.velocity_y += gravity_force
+    
+    # Mettre à jour le timer d'inversion de gravité si actif
+    if self.gravity_inverted:
+        self.gravity_timer += 1
+        if self.gravity_timer >= self.gravity_duration:
+            self.invert_gravity()  # Réinitialiser la gravité à normale
+    
+    old_y = self.rect.y
+    
+    self.rect.y += self.velocity_y
+    
+    previous_standing_on = self.standing_on
+    self.standing_on = None
+    
+    self.just_landed = False
+    
+    for obj in game_objects:
+        if isinstance(obj, Block):
+            # Correction: vérifier si le joueur était au-dessus du bloc avant la mise à jour
+            if not self.gravity_inverted:
+                if (old_y + CUBE_SIZE <= obj.rect.top and 
+                    self.rect.y + CUBE_SIZE >= obj.rect.top and
+                    self.rect.right > obj.rect.left and
+                    self.rect.left < obj.rect.right):
+                    
+                    self.rect.bottom = obj.rect.top
+                    self.velocity_y = 0
+                    
+                    if self.is_jumping:
+                        self.just_landed = True
+                    
+                    self.is_jumping = False
+                    self.standing_on = obj
+            elif:
+                # En gravité inversée, on vérifie les collisions par le bas
+                if (old_y >= obj.rect.bottom and 
+                    self.rect.y <= obj.rect.bottom and
+                    self.rect.right > obj.rect.left and
+                    self.rect.left < obj.rect.right):
+                    
+                    self.rect.top = obj.rect.bottom
+                    self.velocity_y = 0
+                    
+                    if self.is_jumping:
+                        self.just_landed = True
+                    
+                    self.is_jumping = False
+                    self.standing_on = obj
+            
+            # Collision latérale - seulement si ce n'est pas une collision verticale
+            elif self.rect.colliderect(obj.rect):
+                self.is_alive = False
+                print("Game Over! Collision latérale avec un bloc")
+
                     
             elif isinstance(obj, BlockGapBlockWithSpike):
                 bloc_rects = [obj.get_rects()[0], obj.get_rects()[1]]
@@ -172,7 +184,7 @@ class Player:
                             
                             self.is_jumping = False
                             self.standing_on = obj
-                    else:
+                    elif:
                         # En gravité inversée
                         if (old_y >= bloc_rect.bottom and 
                             self.rect.y <= bloc_rect.bottom and
@@ -229,11 +241,11 @@ class Player:
                             self.standing_on = obj
                         
                     # Collision latérale - seulement si ce n'est pas une collision verticale
-                    elif (self.rect.colliderect(pillar_rect) and 
+                    elif(self.rect.colliderect(pillar_rect) and 
                           not (old_y + CUBE_SIZE <= pillar_rect.top or 
                                (self.gravity_inverted and old_y >= pillar_rect.bottom))):
-                        self.is_alive = False
-                        print("Game Over! Collision latérale avec un pilier de blocs")
+                    self.is_alive = False
+                    print("Game Over! Collision latérale avec un pilier de blocs")
             
             # Ajout de la détection des collisions avec BouncingObstacle
             elif isinstance(obj, BouncingObstacle):
