@@ -16,6 +16,8 @@ from klass import BouncingObstacle
 from klass import DoubleBlockPillar
 from klass import TriplePikesWithOrb
 from klass import JumpPad
+from klass import QuintuplePikesWithJumpPad
+from klass import DoublePikesWithGravityOrb
 
 pygame.init()
 
@@ -116,7 +118,7 @@ def main():
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, Block):
                 last_obstacle_right = last_obstacle.rect.right
-            elif isinstance(last_obstacle, DoublePikes) or isinstance(last_obstacle, TriplePikes) or isinstance(last_obstacle, QuadruplePikes) or isinstance(last_obstacle, TriplePikesWithOrb):
+            elif isinstance(last_obstacle, DoublePikes) or isinstance(last_obstacle, TriplePikes) or isinstance(last_obstacle, QuadruplePikes) or isinstance(last_obstacle, TriplePikesWithOrb) or isinstance(last_obstacle, DoublePikesWithGravityOrb):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, BouncingObstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
@@ -125,6 +127,8 @@ def main():
             elif isinstance(last_obstacle, BlockGapBlockWithSpike):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, JumpPad):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, QuintuplePikesWithJumpPad):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             
             # Vérifier si l'espace est suffisant pour un nouvel obstacle
@@ -143,12 +147,14 @@ def main():
                     obj = Block(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed == 7:
                 choice = random.random()
-                if choice < 0.3:
+                if choice < 0.2:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.6:
+                elif choice < 0.4:
                     obj = Block(WIDTH)
-                elif choice < 0.8:
+                elif choice < 0.6:
                     obj = DoublePikes(WIDTH)
+                elif choice < 0.8:
+                    obj = QuintuplePikesWithJumpPad(WIDTH)
                 else:
                     obj = TriplePikesWithOrb(WIDTH)  # Ajout de l'orbe jaune
             elif current_speed == 8:
@@ -157,14 +163,16 @@ def main():
                     obj = Obstacle(WIDTH)
                 elif choice < 0.2:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.5:
+                elif choice < 0.4:
                     obj = DoubleBlockPillar(WIDTH)
-                elif choice < 0.7:
+                elif choice < 0.6:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.85:
+                elif choice < 0.75:
                     obj = BouncingObstacle(WIDTH)
+                elif choice < 0.9:
+                    obj = TriplePikesWithOrb(WIDTH)
                 else:
-                    obj = TriplePikesWithOrb(WIDTH)  # Ajout du TriplePikesWithOrb
+                    obj = DoublePikesWithGravityOrb(WIDTH)  # Ajout de l'orbe de gravité
             elif current_speed == 9:
                 choice = random.random()
                 if choice < 0.08:
@@ -230,7 +238,24 @@ def main():
                 if obj.x + obj.width < 0:
                     game_objects.remove(obj)
                     score += 1
-            
+            elif isinstance(obj, DoublePikesWithGravityOrb):
+                # Vérifier l'activation de l'orbe
+                obj.check_activation(player, keys)
+    
+                # Vérifier les collisions avec les pics
+                for i, rect in enumerate(obj.get_rects()):
+                    if i < 2:  # Les 2 premiers rectangles sont les pics
+                        if player.rect.colliderect(rect):
+                            player.is_alive = False
+                            print("Game Over! Collision avec un pic de l'orbe de gravité")
+                            running = False
+                            break
+    
+                # Si l'objet est hors de l'écran, le supprimer et augmenter le score
+                if obj.x + obj.width < 0:
+                    game_objects.remove(obj)
+                    score += 1
+
             elif isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
                 player.is_alive = False
                 print("Game Over! Collision avec un obstacle")
@@ -281,7 +306,23 @@ def main():
                     player.rect.left < obj.get_rect().right):
         
                     obj.activate(player)  # Activer le pad et appliquer le boost
-
+            
+            elif isinstance(obj, QuintuplePikesWithJumpPad):
+                rects = obj.get_rects()
+                jumppad_rect = rects[-1]  # Le dernier rectangle est le jumppad
+                
+                # Vérifier la collision avec le jumppad
+                if player.rect.colliderect(jumppad_rect):
+                    obj.activate_jump_pad(player)
+                
+                # Vérifier les collisions avec les pics (indices 5 à 9 sont les pics après les 5 blocs)
+                for i in range(5, 10):
+                    if i < len(rects) and player.rect.colliderect(rects[i]):
+                        player.is_alive = False
+                        print("Game Over! Collision avec un pic quintuple")
+                        running = False
+                        break
+                    
             # Supprimer les objets qui sortent de l'écran et augmenter le score
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
@@ -291,7 +332,8 @@ def main():
                 (isinstance(obj, BouncingObstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, DoubleBlockPillar) and obj.x + obj.width < 0) or
                 (isinstance(obj, JumpPad) and obj.x + obj.width < 0) or
-                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
+                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0) or
+                (isinstance(obj, QuintuplePikesWithJumpPad) and obj.x + obj.width < 0)):
                 game_objects.remove(obj)
                 score += 1
                 

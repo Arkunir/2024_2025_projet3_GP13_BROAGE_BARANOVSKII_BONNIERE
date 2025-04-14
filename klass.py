@@ -34,9 +34,14 @@ class Player:
         
         # Ajouter des attributs pour la rotation
         self.rotation_angle = 0
-        self.rotation_speed = -9  # Degrés par frame
+        self.rotation_speed = 9  # Degrés par frame (valeur positive)
         self.total_rotation = 0  # Pour suivre la rotation totale
         self.rotating = False
+        
+        # Ajouter les attributs pour l'inversion de gravité
+        self.gravity_inverted = False
+        self.gravity_timer = 0
+        self.gravity_duration = 120  # Durée de l'inversion de gravité (2 secondes à 60 FPS)
     
     def load_skins(self):
         skins = []
@@ -55,7 +60,7 @@ class Player:
                 try:
                     # Charger l'image
                     image = pygame.image.load(path).convert_alpha()
-                    # Redimensionner à une taille plus grande que CUBE_SIZE (1.5x)
+                    # Redimensionner à une taille plus grande que CUBE_SIZE (4x)
                     new_size = int(CUBE_SIZE * 4)
                     image = pygame.transform.scale(image, (new_size, new_size))
                     skins.append(image)
@@ -87,7 +92,15 @@ class Player:
         was_jumping = self.is_jumping
         previous_standing = self.standing_on is not None or self.rect.y >= GROUND_HEIGHT - CUBE_SIZE
         
-        self.velocity_y += GRAVITY
+        # Appliquer la gravité selon son orientation
+        gravity_force = -GRAVITY if self.gravity_inverted else GRAVITY
+        self.velocity_y += gravity_force
+        
+        # Mettre à jour le timer d'inversion de gravité si actif
+        if self.gravity_inverted:
+            self.gravity_timer += 1
+            if self.gravity_timer >= self.gravity_duration:
+                self.invert_gravity()  # Réinitialiser la gravité à normale
         
         old_y = self.rect.y
         
@@ -100,22 +113,39 @@ class Player:
         
         for obj in game_objects:
             if isinstance(obj, Block):
-                if (old_y + CUBE_SIZE <= obj.rect.top and 
-                    self.rect.y + CUBE_SIZE >= obj.rect.top and
-                    self.rect.right > obj.rect.left and
-                    self.rect.left < obj.rect.right):
-                    
-                    self.rect.bottom = obj.rect.top
-                    self.velocity_y = 0
-                    
-                    if self.is_jumping:
-                        self.just_landed = True
-                    
-                    self.is_jumping = False
-                    self.standing_on = obj
-                    
-                elif (self.rect.colliderect(obj.rect) and 
-                      not (old_y + CUBE_SIZE <= obj.rect.top)):
+                # Collision par dessus (normale ou inversée selon la gravité)
+                if not self.gravity_inverted:
+                    if (old_y + CUBE_SIZE <= obj.rect.top and 
+                        self.rect.y + CUBE_SIZE >= obj.rect.top and
+                        self.rect.right > obj.rect.left and
+                        self.rect.left < obj.rect.right):
+                        
+                        self.rect.bottom = obj.rect.top
+                        self.velocity_y = 0
+                        
+                        if self.is_jumping:
+                            self.just_landed = True
+                        
+                        self.is_jumping = False
+                        self.standing_on = obj
+                else:
+                    # En gravité inversée, on vérifie les collisions par le bas
+                    if (old_y >= obj.rect.bottom and 
+                        self.rect.y <= obj.rect.bottom and
+                        self.rect.right > obj.rect.left and
+                        self.rect.left < obj.rect.right):
+                        
+                        self.rect.top = obj.rect.bottom
+                        self.velocity_y = 0
+                        
+                        if self.is_jumping:
+                            self.just_landed = True
+                        
+                        self.is_jumping = False
+                        self.standing_on = obj
+                
+                # Collision latérale - seulement si ce n'est pas une collision verticale
+                elif self.rect.colliderect(obj.rect):
                     self.is_alive = False
                     print("Game Over! Collision latérale avec un bloc")
                     
@@ -128,44 +158,80 @@ class Player:
                     print("Game Over! Collision avec un pic")
                 
                 for bloc_rect in bloc_rects:
-                    if (old_y + CUBE_SIZE <= bloc_rect.top and 
-                        self.rect.y + CUBE_SIZE >= bloc_rect.top and
-                        self.rect.right > bloc_rect.left and
-                        self.rect.left < bloc_rect.right):
+                    if not self.gravity_inverted:
+                        if (old_y + CUBE_SIZE <= bloc_rect.top and 
+                            self.rect.y + CUBE_SIZE >= bloc_rect.top and
+                            self.rect.right > bloc_rect.left and
+                            self.rect.left < bloc_rect.right):
+                            
+                            self.rect.bottom = bloc_rect.top
+                            self.velocity_y = 0
+                            
+                            if self.is_jumping:
+                                self.just_landed = True
+                            
+                            self.is_jumping = False
+                            self.standing_on = obj
+                    else:
+                        # En gravité inversée
+                        if (old_y >= bloc_rect.bottom and 
+                            self.rect.y <= bloc_rect.bottom and
+                            self.rect.right > bloc_rect.left and
+                            self.rect.left < bloc_rect.right):
+                            
+                            self.rect.top = bloc_rect.bottom
+                            self.velocity_y = 0
+                            
+                            if self.is_jumping:
+                                self.just_landed = True
+                            
+                            self.is_jumping = False
+                            self.standing_on = obj
                         
-                        self.rect.bottom = bloc_rect.top
-                        self.velocity_y = 0
-                        
-                        if self.is_jumping:
-                            self.just_landed = True
-                        
-                        self.is_jumping = False
-                        self.standing_on = obj
-                        
+                    # Collision latérale - seulement si ce n'est pas une collision verticale
                     elif (self.rect.colliderect(bloc_rect) and 
-                          not (old_y + CUBE_SIZE <= bloc_rect.top)):
+                          not (old_y + CUBE_SIZE <= bloc_rect.top or 
+                               (self.gravity_inverted and old_y >= bloc_rect.bottom))):
                         self.is_alive = False
                         print("Game Over! Collision latérale avec un bloc de la structure")
             
             elif isinstance(obj, DoubleBlockPillar):
                 # Gestion des collisions avec le pilier
                 for pillar_rect in obj.get_rects():
-                    if (old_y + CUBE_SIZE <= pillar_rect.top and 
-                        self.rect.y + CUBE_SIZE >= pillar_rect.top and
-                        self.rect.right > pillar_rect.left and
-                        self.rect.left < pillar_rect.right):
+                    if not self.gravity_inverted:
+                        if (old_y + CUBE_SIZE <= pillar_rect.top and 
+                            self.rect.y + CUBE_SIZE >= pillar_rect.top and
+                            self.rect.right > pillar_rect.left and
+                            self.rect.left < pillar_rect.right):
+                            
+                            self.rect.bottom = pillar_rect.top
+                            self.velocity_y = 0
+                            
+                            if self.is_jumping:
+                                self.just_landed = True
+                            
+                            self.is_jumping = False
+                            self.standing_on = obj
+                    else:
+                        # En gravité inversée
+                        if (old_y >= pillar_rect.bottom and 
+                            self.rect.y <= pillar_rect.bottom and
+                            self.rect.right > pillar_rect.left and
+                            self.rect.left < pillar_rect.right):
+                            
+                            self.rect.top = pillar_rect.bottom
+                            self.velocity_y = 0
+                            
+                            if self.is_jumping:
+                                self.just_landed = True
+                            
+                            self.is_jumping = False
+                            self.standing_on = obj
                         
-                        self.rect.bottom = pillar_rect.top
-                        self.velocity_y = 0
-                        
-                        if self.is_jumping:
-                            self.just_landed = True
-                        
-                        self.is_jumping = False
-                        self.standing_on = obj
-                        
+                    # Collision latérale - seulement si ce n'est pas une collision verticale
                     elif (self.rect.colliderect(pillar_rect) and 
-                          not (old_y + CUBE_SIZE <= pillar_rect.top)):
+                          not (old_y + CUBE_SIZE <= pillar_rect.top or 
+                               (self.gravity_inverted and old_y >= pillar_rect.bottom))):
                         self.is_alive = False
                         print("Game Over! Collision latérale avec un pilier de blocs")
             
@@ -187,17 +253,36 @@ class Player:
                             self.is_alive = False
                             print("Game Over! Collision avec un obstacle")
                             break
+            
+            # Gestion des collisions avec QuintuplePikesWithJumpPad
+            elif isinstance(obj, QuintuplePikesWithJumpPad):
+                if obj.check_collision(self):
+                    self.is_alive = False
+                    print("Game Over! Collision avec QuintuplePikesWithJumpPad")
         
         on_ground = False
-        if self.rect.y >= GROUND_HEIGHT - CUBE_SIZE and not self.standing_on:
-            self.rect.y = GROUND_HEIGHT - CUBE_SIZE
-            self.velocity_y = 0
-            on_ground = True
-            
-            if self.is_jumping:
-                self.just_landed = True
-            
-            self.is_jumping = False
+        if not self.gravity_inverted:
+            # Vérification du sol normal
+            if self.rect.y >= GROUND_HEIGHT - CUBE_SIZE and not self.standing_on:
+                self.rect.y = GROUND_HEIGHT - CUBE_SIZE
+                self.velocity_y = 0
+                on_ground = True
+                
+                if self.is_jumping:
+                    self.just_landed = True
+                
+                self.is_jumping = False
+        else:
+            # Vérification du "plafond" (nouveau sol en gravité inversée)
+            if self.rect.y <= 0 and not self.standing_on:
+                self.rect.y = 0
+                self.velocity_y = 0
+                on_ground = True
+                
+                if self.is_jumping:
+                    self.just_landed = True
+                
+                self.is_jumping = False
             
         # Si le joueur n'est ni sur un objet ni sur le sol, il est considéré comme sautant
         if not self.standing_on and not on_ground:
@@ -208,20 +293,45 @@ class Player:
         
         # Mettre à jour la rotation si en train de sauter
         if self.rotating:
-            self.total_rotation += self.rotation_speed
+            # Appliquer la rotation dans le bon sens selon la gravité
+            actual_rotation_speed = self.rotation_speed if self.gravity_inverted else -self.rotation_speed
+            self.total_rotation += actual_rotation_speed
             self.rotation_angle = self.total_rotation % 360
             
-            # Arrêter la rotation si on a fait un tour complet et qu'on est au sol
-            if self.total_rotation >= 90 and (self.standing_on is not None or self.rect.y >= GROUND_HEIGHT - CUBE_SIZE):
+            # Arrêter la rotation si on a fait un tour complet (ou presque) et qu'on est au sol
+            if (abs(self.total_rotation) >= 90 and (self.standing_on is not None or on_ground)) or abs(self.total_rotation) >= 360:
                 self.rotating = False
                 self.rotation_angle = 0
                 self.total_rotation = 0
             
     def jump(self):
         if not self.is_jumping:
-            self.velocity_y = JUMP_STRENGTH
+            # Inverser la direction du saut selon la gravité
+            jump_force = -JUMP_STRENGTH if self.gravity_inverted else JUMP_STRENGTH
+            self.velocity_y = jump_force
             self.is_jumping = True
             # Initialiser la rotation au début du saut
+            self.rotating = True
+            self.total_rotation = 0
+    
+    def invert_gravity(self):
+        # Inverser l'état de la gravité
+        self.gravity_inverted = not self.gravity_inverted
+        
+        # Réinitialiser le timer si on active l'inversion, sinon le mettre à 0
+        if self.gravity_inverted:
+            self.gravity_timer = 0
+        else:
+            self.gravity_timer = 0
+        
+        # Inverser la vitesse verticale pour un effet plus fluide
+        self.velocity_y = -self.velocity_y * 0.5  # Réduire légèrement la vitesse pour éviter les sauts trop brusques
+        
+        # Forcer l'état de saut
+        self.is_jumping = True
+        
+        # Initialiser une rotation si on n'est pas déjà en train de tourner
+        if not self.rotating:
             self.rotating = True
             self.total_rotation = 0
             
@@ -257,14 +367,7 @@ class Player:
                 screen.blit(rotated_surface, rotated_rect)
             else:
                 pygame.draw.rect(screen, BLUE, self.rect)
-        
-class MovingObject:
-    def __init__(self, x):
-        self.scroll_speed = INITIAL_SCROLL_SPEED
-        
-    def set_speed(self, speed):
-        self.scroll_speed = speed
-
+                
 class Obstacle(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -704,6 +807,135 @@ class TriplePikesWithOrb(MovingObject):
             self.orb_activated = True
             player.velocity_y = JUMP_STRENGTH * 1  # Saut aussi puissant que le saut normal
             player.is_jumping = True
+            return True
+        return False
+
+class DoublePikesWithGravityOrb(MovingObject):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+        self.y = GROUND_HEIGHT - CUBE_SIZE
+        self.width = CUBE_SIZE * 2
+        self.height = CUBE_SIZE
+        self.orb_activated = False
+        self.orb_active_timer = 0
+        self.orb_pulse_size = 0
+        self.orb_pulse_alpha = 0
+        self.gravity_inverted = False
+        self.gravity_timer = 0
+        self.gravity_duration = 120  # Durée de l'inversion de gravité (2 secondes à 60 FPS)
+        
+    def update(self):
+        self.x -= self.scroll_speed
+        
+        # Gestion de l'animation d'activation de l'orbe
+        if self.orb_activated:
+            self.orb_active_timer += 1
+            self.orb_pulse_size += 2
+            self.orb_pulse_alpha = max(0, 255 - self.orb_pulse_size * 5)
+            
+            # Réinitialiser après l'animation
+            if self.orb_active_timer > 30:
+                self.orb_activated = False
+                self.orb_active_timer = 0
+                self.orb_pulse_size = 0
+                self.orb_pulse_alpha = 0
+        
+    def draw(self, screen):
+        # Dessiner les 2 pics au sol
+        pygame.draw.polygon(screen, RED, [
+            (self.x, self.y + self.height),
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE/2, self.y)
+        ])
+        
+        pygame.draw.polygon(screen, RED, [
+            (self.x + CUBE_SIZE, self.y + self.height),
+            (self.x + CUBE_SIZE*2, self.y + self.height),
+            (self.x + CUBE_SIZE*1.5, self.y)
+        ])
+        
+        # Position de l'orbe: 2 blocs au-dessus du milieu des deux pics
+        orb_x = self.x + CUBE_SIZE - CUBE_SIZE // 4  # Centré entre les deux pics
+        orb_y = self.y - CUBE_SIZE * 2  # 2 blocs au-dessus
+        orb_width = CUBE_SIZE // 2
+        orb_height = CUBE_SIZE // 2
+        
+        # Dessiner l'effet de pulsation si activé
+        if self.orb_activated:
+            pulse_surface = pygame.Surface((orb_width + self.orb_pulse_size, orb_height + self.orb_pulse_size), pygame.SRCALPHA)
+            pulse_color = (0, 150, 255, self.orb_pulse_alpha)  # Bleu avec transparence
+            pygame.draw.circle(pulse_surface, pulse_color, 
+                              (pulse_surface.get_width() // 2, pulse_surface.get_height() // 2), 
+                              (orb_width + self.orb_pulse_size) // 2)
+            screen.blit(pulse_surface, 
+                       (orb_x - self.orb_pulse_size // 2, orb_y - self.orb_pulse_size // 2))
+        
+        # Dessiner l'orbe bleue
+        pygame.draw.circle(screen, (0, 150, 255), 
+                          (orb_x + orb_width // 2, orb_y + orb_height // 2), 
+                          orb_width // 2)
+        
+        # Ajouter un petit détail à l'intérieur de l'orbe (flèches inversées)
+        inner_color = (0, 100, 200) if not self.orb_activated else (255, 255, 255)
+        pygame.draw.circle(screen, inner_color, 
+                          (orb_x + orb_width // 2, orb_y + orb_height // 2), 
+                          orb_width // 4)
+        
+        # Dessiner de petites flèches pour indiquer l'inversion de gravité
+        arrow_size = orb_width // 5
+        arrow_color = (255, 255, 255)
+        
+        # Flèche vers le haut
+        pygame.draw.polygon(screen, arrow_color, [
+            (orb_x + orb_width // 2, orb_y + orb_height // 4),
+            (orb_x + orb_width // 2 - arrow_size, orb_y + orb_height // 4 + arrow_size),
+            (orb_x + orb_width // 2 + arrow_size, orb_y + orb_height // 4 + arrow_size)
+        ])
+        
+        # Flèche vers le bas
+        pygame.draw.polygon(screen, arrow_color, [
+            (orb_x + orb_width // 2, orb_y + orb_height * 3 // 4),
+            (orb_x + orb_width // 2 - arrow_size, orb_y + orb_height * 3 // 4 - arrow_size),
+            (orb_x + orb_width // 2 + arrow_size, orb_y + orb_height * 3 // 4 - arrow_size)
+        ])
+        
+    def get_rects(self):
+        # Hitboxes pour les 2 pics
+        hitboxes = []
+        spike_width = self.width / 2  # Largeur d'un pic
+        reduced_size = spike_width * 0.6  # Réduire à 60% de la taille
+    
+        # Pour chaque pic, créer une hitbox inscrite
+        for i in range(2):
+            x_offset = (spike_width - reduced_size) / 2
+            y_offset = self.height - reduced_size * 0.8
+        
+            hitboxes.append(pygame.Rect(
+                self.x + i * spike_width + x_offset,
+                self.y + y_offset,
+                reduced_size,
+                reduced_size * 0.7
+            ))
+        
+        # Ajouter la hitbox de l'orbe
+        orb_width = CUBE_SIZE // 2
+        orb_x = self.x + CUBE_SIZE - orb_width // 4  # Centré entre les deux pics
+        orb_y = self.y - CUBE_SIZE * 2  # 2 blocs au-dessus
+        
+        orb_rect = pygame.Rect(orb_x, orb_y, orb_width, orb_width)
+        hitboxes.append(orb_rect)
+        
+        return hitboxes
+    
+    def check_activation(self, player, keys):
+        # Obtenir la hitbox de l'orbe (le 3ème rectangle dans la liste)
+        orb_rect = self.get_rects()[2]
+        
+        # Vérifier si le joueur est en contact avec l'orbe et appuie sur espace
+        if not self.orb_activated and player.rect.colliderect(orb_rect) and keys[pygame.K_SPACE]:
+            self.orb_activated = True
+            player.invert_gravity()  # Appel à une nouvelle méthode dans Player
             return True
         return False
 
