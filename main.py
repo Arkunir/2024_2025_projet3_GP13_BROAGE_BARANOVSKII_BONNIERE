@@ -18,6 +18,7 @@ from klass import TriplePikesWithOrb
 from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
 from klass import PurpleOrb
+from klass import JumppadOrbsObstacle  # Ajout de l'import de la nouvelle classe
 
 pygame.init()
 
@@ -49,7 +50,7 @@ def main():
     min_obstacle_distances = {
         6: 150,  # Espacement minimal à vitesse 6
         7: 175,  # Espacement minimal à vitesse 7
-        8: 225,  # Espacement minimal à vitesse 8
+        8: 500,  # Espacement minimal à vitesse 8
         9: 250,  # Espacement minimal à vitesse 9
         10: 275, # Espacement minimal à vitesse 10
         11: 300  # Espacement minimal à vitesse 11
@@ -130,6 +131,8 @@ def main():
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, QuintuplePikesWithJumpPad):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, JumppadOrbsObstacle):
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
             
             # Vérifier si l'espace est suffisant pour un nouvel obstacle
             if WIDTH - last_obstacle_right < min_distance:
@@ -139,28 +142,28 @@ def main():
         if can_spawn_obstacle and current_time - last_object > object_interval:
             if current_speed == 6:
                 choice = random.random()
-                if choice < 0.4:
+                if choice < 0.35:  # Réduire la probabilité pour faire place à notre nouvel obstacle
                     obj = Obstacle(WIDTH)
-                elif choice < 0.6:
+                elif choice < 0.5:
                     obj = JumpPad(WIDTH)
-                elif choice < 0.8:
+                elif choice < 0.65:
                     obj = Block(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)  # Ajout de l'orbe violette
+                    obj = PurpleOrb(WIDTH)
             elif current_speed == 7:
                 choice = random.random()
                 if choice < 0.15:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.3:
                     obj = Block(WIDTH)
-                elif choice < 0.45:
+                elif choice < 0.5:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.6:
+                elif choice < 0.7:
                     obj = QuintuplePikesWithJumpPad(WIDTH)
-                elif choice < 0.75:
+                elif choice < 0.85:
                     obj = TriplePikesWithOrb(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)  # Ajout de l'orbe violette
+                    obj = PurpleOrb(WIDTH)
             elif current_speed == 8:
                 choice = random.random()
                 if choice < 0.1:
@@ -171,44 +174,50 @@ def main():
                     obj = DoubleBlockPillar(WIDTH)
                 elif choice < 0.5:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.65:
+                elif choice < 0.6:
                     obj = BouncingObstacle(WIDTH)
-                elif choice < 0.8:
+                elif choice < 0.7:
                     obj = TriplePikesWithOrb(WIDTH)
+                elif choice < 0.85:
+                    obj = PurpleOrb(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)  # Ajout de l'orbe violette
+                    obj = JumppadOrbsObstacle(WIDTH)  # Ajout du nouvel obstacle avec 15% de chance
             elif current_speed == 9:
                 choice = random.random()
                 if choice < 0.05:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.1:
                     obj = Block(WIDTH)
-                elif choice < 0.2:
+                elif choice < 0.15:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.4:
+                elif choice < 0.3:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.55:
+                elif choice < 0.4:
                     obj = TriplePikes(WIDTH)
-                elif choice < 0.7:
+                elif choice < 0.5:
                     obj = DoubleBlockPillar(WIDTH)
-                elif choice < 0.85:
+                elif choice < 0.6:
                     obj = QuadruplePikes(WIDTH)
+                elif choice < 0.75:
+                    obj = PurpleOrb(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)  # Ajout de l'orbe violette
+                    obj = JumppadOrbsObstacle(WIDTH)  # Ajout du nouvel obstacle avec 25% de chance
             elif current_speed >= 10:
                 choice = random.random()
-                if choice < 0.35:
+                if choice < 0.3:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.55:
+                elif choice < 0.45:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.7:
+                elif choice < 0.55:
                     obj = TriplePikes(WIDTH)
-                elif choice < 0.85:
+                elif choice < 0.65:
                     obj = QuadruplePikes(WIDTH)
-                elif choice < 0.95:
+                elif choice < 0.75:
                     obj = TriplePikesWithOrb(WIDTH)
+                elif choice < 0.85:
+                    obj = PurpleOrb(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)  # Ajout de l'orbe violette
+                    obj = JumppadOrbsObstacle(WIDTH)  # Ajout du nouvel obstacle avec 15% de chance
                 
             obj.set_speed(current_speed)
             game_objects.append(obj)
@@ -222,12 +231,28 @@ def main():
             print("Game Over! Score:", score)
             running = False
         
+        # Créer une copie de la liste pour éviter les problèmes de modification pendant l'itération
+        objects_to_remove = []
+        
         # Mettre à jour les objets du jeu et vérifier les collisions
         for obj in game_objects[:]:
             obj.update()
             
+            # Gestion spécifique pour le JumppadOrbsObstacle
+            if isinstance(obj, JumppadOrbsObstacle):
+                # Vérifier les collisions avec cet obstacle
+                if obj.check_collision(player, keys):
+                    player.is_alive = False
+                    print("Game Over! Collision avec un JumppadOrbsObstacle")
+                    running = False
+                    break
+                
+                # Si l'objet est hors de l'écran, le marquer pour suppression
+                if obj.x + obj.width < 0:
+                    objects_to_remove.append(obj)
+            
             # Gestion spécifique pour le TriplePikesWithOrb
-            if isinstance(obj, TriplePikesWithOrb):
+            elif isinstance(obj, TriplePikesWithOrb):
                 # Vérifier l'activation de l'orbe
                 obj.check_activation(player, keys)
                 
@@ -240,20 +265,18 @@ def main():
                             running = False
                             break
                 
-                # Si l'objet est hors de l'écran, le supprimer et augmenter le score
+                # Si l'objet est hors de l'écran, le marquer pour suppression
                 if obj.x + obj.width < 0:
-                    game_objects.remove(obj)
-                    score += 1
+                    objects_to_remove.append(obj)
             
             # Gestion spécifique pour l'orbe violette
             elif isinstance(obj, PurpleOrb):
                 # Vérifier l'activation de l'orbe
                 obj.check_activation(player, keys)
                 
-                # Si l'objet est hors de l'écran, le supprimer et augmenter le score
+                # Si l'objet est hors de l'écran, le marquer pour suppression
                 if obj.x + obj.width < 0:
-                    game_objects.remove(obj)
-                    score += 1
+                    objects_to_remove.append(obj)
 
             elif isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
                 player.is_alive = False
@@ -322,7 +345,7 @@ def main():
                         running = False
                         break
                     
-            # Supprimer les objets qui sortent de l'écran et augmenter le score
+            # Vérifier si l'objet est hors de l'écran pour le marquer pour suppression
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
                 (isinstance(obj, (DoublePikes, TriplePikes, QuadruplePikes)) and obj.x + obj.width < 0) or
@@ -331,6 +354,11 @@ def main():
                 (isinstance(obj, JumpPad) and obj.x + obj.width < 0) or
                 (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0) or
                 (isinstance(obj, QuintuplePikesWithJumpPad) and obj.x + obj.width < 0)):
+                objects_to_remove.append(obj)
+        
+        # Maintenant, supprimons tous les objets marqués et incrémentons le score
+        for obj in objects_to_remove:
+            if obj in game_objects:  # Vérifier que l'objet est toujours dans la liste
                 game_objects.remove(obj)
                 score += 1
                 

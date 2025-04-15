@@ -300,7 +300,6 @@ class Obstacle(MovingObject):
             reduced_size * 0.7  # Hitbox plus petite en hauteur
         )
 
-
 class DoublePikes(MovingObject):
     def __init__(self, x):
         super().__init__(x)
@@ -1005,6 +1004,330 @@ class QuintuplePikesWithJumpPad(MovingObject):
                 
         return False  # Pas de collision
 
+class JumppadOrbsObstacle(MovingObject):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+        self.width = CUBE_SIZE * 20  # Maintenu à 19 pour garder la largeur totale
+        self.height = CUBE_SIZE * 5   # Hauteur pour les calculs de collision
+        
+        # Créer une instance de JumpPad
+        self.jumppad = JumpPad(x + CUBE_SIZE * 1)
+        
+        # États des orbes (séparés)
+        self.yellow_orb1_activated = False
+        self.yellow_orb2_activated = False
+        self.purple_orb_activated = False
+        
+        # Timers et paramètres d'animation pour chaque orbe
+        self.yellow_orb1_timer = 0
+        self.yellow_orb1_pulse_size = 0
+        self.yellow_orb1_pulse_alpha = 0
+        
+        self.yellow_orb2_timer = 0
+        self.yellow_orb2_pulse_size = 0
+        self.yellow_orb2_pulse_alpha = 0
+        
+        self.purple_orb_timer = 0
+        self.purple_orb_pulse_size = 0
+        self.purple_orb_pulse_alpha = 0
+        
+        # Orbes: force du saut
+        self.yellow_orb_boost = JUMP_STRENGTH * 1.2
+        self.purple_orb_boost = JUMP_STRENGTH * 0.8
+        
+    def update(self):
+        self.x -= self.scroll_speed
+        self.jumppad.x = self.x + CUBE_SIZE * 1  # Mettre à jour la position du jumppad
+        self.jumppad.update()  # Mettre à jour le jumppad
+        
+        # Gérer les animations de chaque orbe séparément
+        self.update_orb_animation('yellow_orb1')
+        self.update_orb_animation('yellow_orb2')
+        self.update_orb_animation('purple_orb')
+        
+    def update_orb_animation(self, orb_name):
+        # Vérifie si l'orbe est activée
+        is_activated = getattr(self, f"{orb_name}_activated")
+        if is_activated:
+            # Incrémente le timer
+            timer = getattr(self, f"{orb_name}_timer") + 1
+            setattr(self, f"{orb_name}_timer", timer)
+            
+            # Mettre à jour les effets visuels
+            pulse_size = getattr(self, f"{orb_name}_pulse_size") + 2
+            setattr(self, f"{orb_name}_pulse_size", pulse_size)
+            
+            pulse_alpha = max(0, 255 - pulse_size * 5)
+            setattr(self, f"{orb_name}_pulse_alpha", pulse_alpha)
+            
+            # Réinitialiser après l'animation
+            if timer > 30:
+                setattr(self, f"{orb_name}_activated", False)
+                setattr(self, f"{orb_name}_timer", 0)
+                setattr(self, f"{orb_name}_pulse_size", 0)
+                setattr(self, f"{orb_name}_pulse_alpha", 0)
+        
+    def draw(self, screen):
+        # 1. Dessiner le jumppad
+        self.jumppad.draw(screen)
+        
+        # 2. Dessiner les pics sur le sol (toute la longueur sauf où se trouve le jumppad)
+        for i in range(18):  # 18 pics comme avant
+            # Sauter le segment où se trouve le jumppad
+            if i == 0 or i == 1:
+                continue
+                
+            pygame.draw.polygon(screen, RED, [
+                (self.x + i * CUBE_SIZE, GROUND_HEIGHT),
+                (self.x + (i+1) * CUBE_SIZE, GROUND_HEIGHT),
+                (self.x + (i+0.5) * CUBE_SIZE, GROUND_HEIGHT - CUBE_SIZE)
+            ])
+        
+        # 3. Dessiner les pics verticaux en l'air avec des blocs à leur droite
+        air_spikes_x = self.x + CUBE_SIZE * 18  # Position inchangée à 18
+        block_x = air_spikes_x + CUBE_SIZE  # Position des blocs à droite des pics
+        
+        # Dessiner 3 pics empilés verticalement avec des pointes vers la gauche
+        for i in range(3):
+            spike_y = GROUND_HEIGHT - CUBE_SIZE * (7 + i)
+            
+            # Dessiner le pic
+            pygame.draw.polygon(screen, RED, [
+                (air_spikes_x, spike_y),  # Point gauche
+                (air_spikes_x + CUBE_SIZE, spike_y - CUBE_SIZE/2),  # Point haut
+                (air_spikes_x + CUBE_SIZE, spike_y + CUBE_SIZE/2)   # Point bas
+            ])
+            
+            # Dessiner le bloc à droite du pic (maintenant en noir)
+            pygame.draw.rect(screen, (0, 0, 0), [  # Bloc noir au lieu de bleu
+                block_x,
+                spike_y - CUBE_SIZE/2,  # Aligner avec le centre du pic
+                CUBE_SIZE,
+                CUBE_SIZE
+            ])
+        
+        # 4. Dessiner les orbes
+        # Première orbe jaune
+        yellow_orb1_x = self.x + CUBE_SIZE * 8
+        yellow_orb1_y = GROUND_HEIGHT - CUBE_SIZE * 3
+        orb_width = CUBE_SIZE // 2
+        
+        # Effet de pulsation de la première orbe jaune
+        if self.yellow_orb1_activated:
+            self.draw_specific_orb_pulse(screen, yellow_orb1_x, yellow_orb1_y, orb_width, 
+                                        (255, 255, 0), self.yellow_orb1_pulse_size, self.yellow_orb1_pulse_alpha)
+        
+        # Dessiner la première orbe jaune
+        pygame.draw.circle(screen, (255, 255, 0), 
+                          (yellow_orb1_x, yellow_orb1_y), 
+                          orb_width // 2)
+        inner_color1 = (200, 200, 0) if not self.yellow_orb1_activated else (255, 255, 255)
+        pygame.draw.circle(screen, inner_color1, 
+                          (yellow_orb1_x, yellow_orb1_y), 
+                          orb_width // 4)
+        
+        # Deuxième orbe jaune
+        yellow_orb2_x = self.x + CUBE_SIZE * 13
+        yellow_orb2_y = GROUND_HEIGHT - CUBE_SIZE * 7
+        
+        # Effet de pulsation de la deuxième orbe jaune
+        if self.yellow_orb2_activated:
+            self.draw_specific_orb_pulse(screen, yellow_orb2_x, yellow_orb2_y, orb_width, 
+                                        (255, 255, 0), self.yellow_orb2_pulse_size, self.yellow_orb2_pulse_alpha)
+            
+        # Dessiner la deuxième orbe jaune
+        pygame.draw.circle(screen, (255, 255, 0), 
+                          (yellow_orb2_x, yellow_orb2_y), 
+                          orb_width // 2)
+        inner_color2 = (200, 200, 0) if not self.yellow_orb2_activated else (255, 255, 255)
+        pygame.draw.circle(screen, inner_color2, 
+                          (yellow_orb2_x, yellow_orb2_y), 
+                          orb_width // 4)
+        
+        # Orbe violette (chemin correct)
+        purple_orb_x = self.x + CUBE_SIZE * 14
+        purple_orb_y = GROUND_HEIGHT - CUBE_SIZE * 3
+        
+        # Effet de pulsation de l'orbe violette
+        if self.purple_orb_activated:
+            self.draw_specific_orb_pulse(screen, purple_orb_x, purple_orb_y, orb_width, 
+                                        (160, 32, 240), self.purple_orb_pulse_size, self.purple_orb_pulse_alpha)
+            
+        # Dessiner l'orbe violette
+        pygame.draw.circle(screen, (160, 32, 240), 
+                          (purple_orb_x, purple_orb_y), 
+                          orb_width // 2)
+        inner_color3 = (120, 24, 180) if not self.purple_orb_activated else (255, 255, 255)
+        pygame.draw.circle(screen, inner_color3, 
+                          (purple_orb_x, purple_orb_y), 
+                          orb_width // 4)
+                          
+    def draw_specific_orb_pulse(self, screen, x, y, orb_width, color, pulse_size, pulse_alpha):
+        pulse_surface = pygame.Surface((orb_width + pulse_size, orb_width + pulse_size), pygame.SRCALPHA)
+        r, g, b = color
+        pulse_color = (r, g, b, pulse_alpha)
+        pygame.draw.circle(pulse_surface, pulse_color, 
+                          (pulse_surface.get_width() // 2, pulse_surface.get_height() // 2), 
+                          (orb_width + pulse_size) // 2)
+        screen.blit(pulse_surface, 
+                   (x - orb_width//2 - pulse_size // 2, y - orb_width//2 - pulse_size // 2))
+    
+    def draw_orb_pulse(self, screen, x, y, orb_width, color):
+        pass
+    
+    def get_rects(self):
+        hitboxes = []
+        orb_width = CUBE_SIZE // 2
+        
+        # 1. Hitbox du jumppad (utiliser celle de la classe JumpPad)
+        jumppad_rect = self.jumppad.get_rect()
+        hitboxes.append(jumppad_rect)
+        
+        # 2. Hitboxes des pics au sol (sauter le premier)
+        for i in range(18):  # Maintenu à 18 comme avant
+            # Sauter le segment où se trouve le jumppad
+            if i == 0 or i == 1:
+                continue
+                
+            # Ajustement de la hitbox des pics pour être plus précise
+            spike_width = CUBE_SIZE
+            reduced_size = spike_width * 0.6
+            x_offset = (spike_width - reduced_size) / 2
+            y_offset = CUBE_SIZE * 0.2
+            
+            hitboxes.append(pygame.Rect(
+                self.x + i * spike_width + x_offset,
+                GROUND_HEIGHT - CUBE_SIZE + y_offset,
+                reduced_size,
+                reduced_size * 0.7
+            ))
+        
+        # 3. Hitboxes des pics verticaux en l'air
+        air_spikes_x = self.x + CUBE_SIZE * 18  # Maintenu à 18 comme avant
+        block_x = air_spikes_x + CUBE_SIZE  # Position des blocs à droite des pics
+        
+        # Hitboxes pour les 3 pics verticaux
+        for i in range(3):
+            spike_y = GROUND_HEIGHT - CUBE_SIZE * (7 + i)
+            
+            # Hitbox ajustée pour le pic horizontal pointant vers la gauche
+            hitboxes.append(pygame.Rect(
+                air_spikes_x + x_offset,
+                spike_y - CUBE_SIZE/4,  # Centrer verticalement
+                reduced_size * 0.7,
+                reduced_size * 0.6
+            ))
+            
+            # Hitbox pour le bloc à droite du pic
+            hitboxes.append(pygame.Rect(
+                block_x,
+                spike_y - CUBE_SIZE/2,  # Aligner avec le centre du pic
+                CUBE_SIZE,
+                CUBE_SIZE
+            ))
+        
+        # 4. Hitboxes des orbes
+        # Première orbe jaune
+        yellow_orb1_x = self.x + CUBE_SIZE * 8 - orb_width // 2
+        yellow_orb1_y = GROUND_HEIGHT - CUBE_SIZE * 3 - orb_width // 2
+        hitboxes.append(pygame.Rect(yellow_orb1_x, yellow_orb1_y, orb_width, orb_width))
+        
+        # Deuxième orbe jaune
+        yellow_orb2_x = self.x + CUBE_SIZE * 13 - orb_width // 2
+        yellow_orb2_y = GROUND_HEIGHT - CUBE_SIZE * 7 - orb_width // 2
+        hitboxes.append(pygame.Rect(yellow_orb2_x, yellow_orb2_y, orb_width, orb_width))
+        
+        # Orbe violette
+        purple_orb_x = self.x + CUBE_SIZE * 14 - orb_width // 2
+        purple_orb_y = GROUND_HEIGHT - CUBE_SIZE * 3 - orb_width // 2
+        hitboxes.append(pygame.Rect(purple_orb_x, purple_orb_y, orb_width, orb_width))
+        
+        return hitboxes
+    
+    def check_collision(self, player, keys):
+        rects = self.get_rects()
+        
+        # Vérifier la collision avec le jumppad (utiliser la méthode activate de JumpPad)
+        jumppad_rect = rects[0]
+        if player.rect.colliderect(jumppad_rect) and not player.is_jumping:
+            self.jumppad.activate(player)
+            return False  # Pas une collision mortelle
+        
+        # Nombre de pics au sol (18 - 2 pour le jumppad = 16)
+        ground_spikes_count = 16
+        
+        # Nombre total de pics en l'air et leur blocs (3 pics + 3 blocs = 6)
+        air_obstacles_count = 6
+        
+        # Vérifier les collisions avec les pics au sol
+        for i in range(1, ground_spikes_count + 1):
+            if player.rect.colliderect(rects[i]):
+                player.is_alive = False
+                print("Game Over! Collision avec un pic au sol")
+                return True  # Collision mortelle
+        
+        # Indice de départ pour les obstacles en l'air
+        air_obstacles_start = 1 + ground_spikes_count
+        
+        # Vérifier les collisions avec les pics en l'air et leurs blocs
+        for i in range(air_obstacles_start, air_obstacles_start + air_obstacles_count):
+            rect = rects[i]
+            if player.rect.colliderect(rect):
+                # Vérifier si c'est un bloc (indices pairs après le premier pic)
+                if (i - air_obstacles_start) % 2 == 1:  # Les blocs sont aux indices impairs
+                    # Vérifier si le joueur atterrit sur le dessus du bloc
+                    if (player.rect.bottom <= rect.top + 10 and 
+                        player.velocity_y > 0):
+                        player.rect.bottom = rect.top
+                        player.velocity_y = 0
+                        player.is_jumping = False
+                        player.standing_on = self
+                        return False
+                    else:
+                        player.is_alive = False
+                        print("Game Over! Collision latérale avec un bloc en l'air")
+                        return True
+                else:  # C'est un pic
+                    player.is_alive = False
+                    print("Game Over! Collision avec un pic en l'air")
+                    return True
+        
+        # Indice des orbes dans rects: dernières 3 positions
+        orbs_start = 1 + ground_spikes_count + air_obstacles_count
+        
+        # Vérifier la collision avec la première orbe jaune
+        if player.rect.colliderect(rects[orbs_start]) and keys[pygame.K_SPACE] and not self.yellow_orb1_activated:
+            self.activate_yellow_orb1(player)
+            return False
+            
+        # Vérifier la collision avec la deuxième orbe jaune
+        if player.rect.colliderect(rects[orbs_start + 1]) and keys[pygame.K_SPACE] and not self.yellow_orb2_activated:
+            self.activate_yellow_orb2(player)
+            return False
+            
+        # Vérifier la collision avec l'orbe violette
+        if player.rect.colliderect(rects[orbs_start + 2]) and keys[pygame.K_SPACE] and not self.purple_orb_activated:
+            self.activate_purple_orb(player)
+            return False
+                
+        return False  # Pas de collision
+        
+    def activate_yellow_orb1(self, player):
+        self.yellow_orb1_activated = True
+        player.velocity_y = self.yellow_orb_boost
+        player.is_jumping = True
+        
+    def activate_yellow_orb2(self, player):
+        self.yellow_orb2_activated = True
+        player.velocity_y = self.yellow_orb_boost
+        player.is_jumping = True
+        
+    def activate_purple_orb(self, player):
+        self.purple_orb_activated = True
+        player.velocity_y = self.purple_orb_boost
+        player.is_jumping = True
+    
 class Button:
     def __init__(self, text, x, y, width, height, color, hover_color):
         self.text = text
