@@ -29,14 +29,16 @@ class Player:
         
         # Charger les skins disponibles
         self.skins = self.load_skins()
-        self.current_skin_index = 0
+        # Choisir un skin aléatoire dès le début
+        self.current_skin_index = random.randint(0, len(self.skins) - 1) if self.skins else 0
         self.image = self.skins[self.current_skin_index] if self.skins else None
+        print(f"Skin aléatoire choisi au démarrage: index {self.current_skin_index}")
         
         # Ajouter des attributs pour la rotation
         self.rotation_angle = 0
         self.rotation_speed = -9  # Degrés par frame
         self.total_rotation = 0  # Pour suivre la rotation totale
-        self.rotating = False
+        self.is_rotating = False  # Pour savoir si le joueur est en train de tourner
     
     def load_skins(self):
         skins = []
@@ -55,7 +57,7 @@ class Player:
                 try:
                     # Charger l'image
                     image = pygame.image.load(path).convert_alpha()
-                    # Redimensionner à une taille plus grande que CUBE_SIZE (1.5x)
+                    # Redimensionner à une taille plus grande que CUBE_SIZE (4x)
                     new_size = int(CUBE_SIZE * 4)
                     image = pygame.transform.scale(image, (new_size, new_size))
                     skins.append(image)
@@ -203,26 +205,31 @@ class Player:
         if not self.standing_on and not on_ground:
             self.is_jumping = True
             
-        # Conserve l'état précédent pour la frame suivante
-        self.was_on_ground = self.standing_on is not None or on_ground
+            # Activer la rotation uniquement quand le joueur est en l'air
+            if not self.is_rotating and self.is_jumping:
+                self.is_rotating = True
+                self.total_rotation = 0
         
-        # Mettre à jour la rotation si en train de sauter
-        if self.rotating:
+        # Arrêter la rotation si le joueur touche le sol
+        if (self.standing_on is not None or on_ground) and self.is_rotating:
+            self.is_rotating = False
+            self.rotation_angle = 0
+            self.total_rotation = 0
+            
+        # Mettre à jour la rotation si le joueur est en l'air
+        if self.is_rotating and self.is_jumping:
             self.total_rotation += self.rotation_speed
             self.rotation_angle = self.total_rotation % 360
             
-            # Arrêter la rotation si on a fait un tour complet et qu'on est au sol
-            if self.total_rotation >= 90 and (self.standing_on is not None or self.rect.y >= GROUND_HEIGHT - CUBE_SIZE):
-                self.rotating = False
-                self.rotation_angle = 0
-                self.total_rotation = 0
+        # Conserve l'état précédent pour la frame suivante
+        self.was_on_ground = self.standing_on is not None or on_ground
             
     def jump(self):
         if not self.is_jumping:
             self.velocity_y = JUMP_STRENGTH
             self.is_jumping = True
             # Initialiser la rotation au début du saut
-            self.rotating = True
+            self.is_rotating = True
             self.total_rotation = 0
             
     def draw(self, screen):
@@ -230,8 +237,8 @@ class Player:
             # Créer une copie de l'image pour la rotation
             image_to_draw = self.image
             
-            # Appliquer la rotation si nécessaire
-            if self.rotating:
+            # Appliquer la rotation si le joueur est en l'air
+            if self.is_rotating and self.is_jumping:
                 image_to_draw = pygame.transform.rotate(self.image, self.rotation_angle)
             
             # Calculer le décalage pour centrer l'image plus grande sur la hitbox
@@ -244,7 +251,7 @@ class Player:
             screen.blit(image_to_draw, (self.rect.x - offset_x, self.rect.y - offset_y))
         else:
             # Fallback sur le rectangle bleu original
-            if self.rotating:
+            if self.is_rotating and self.is_jumping:
                 # Créer une surface pour le cube
                 surface = pygame.Surface((CUBE_SIZE, CUBE_SIZE), pygame.SRCALPHA)
                 pygame.draw.rect(surface, BLUE, (0, 0, CUBE_SIZE, CUBE_SIZE))
@@ -591,12 +598,12 @@ class DoubleBlockPillar(MovingObject):
     def get_rects(self):
         return self.block_rects
 
-class TriplePikesWithOrb(MovingObject):
+class FivePikesWithOrb(MovingObject):
     def __init__(self, x):
         super().__init__(x)
         self.x = x
         self.y = GROUND_HEIGHT - CUBE_SIZE
-        self.width = CUBE_SIZE * 3
+        self.width = CUBE_SIZE * 5  # Ajusté pour 5 pics
         self.height = CUBE_SIZE
         self.orb_activated = False
         self.orb_active_timer = 0
@@ -620,27 +627,16 @@ class TriplePikesWithOrb(MovingObject):
                 self.orb_pulse_alpha = 0
         
     def draw(self, screen):
-        # Dessiner les 3 pics au sol
-        pygame.draw.polygon(screen, RED, [
-            (self.x, self.y + self.height),
-            (self.x + CUBE_SIZE, self.y + self.height),
-            (self.x + CUBE_SIZE/2, self.y)
-        ])
+        # Dessiner les 5 pics au sol
+        for i in range(5):
+            pygame.draw.polygon(screen, RED, [
+                (self.x + CUBE_SIZE * i, self.y + self.height),
+                (self.x + CUBE_SIZE * (i+1), self.y + self.height),
+                (self.x + CUBE_SIZE * (i+0.5), self.y)
+            ])
         
-        pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE, self.y + self.height),
-            (self.x + CUBE_SIZE*2, self.y + self.height),
-            (self.x + CUBE_SIZE*1.5, self.y)
-        ])
-        
-        pygame.draw.polygon(screen, RED, [
-            (self.x + CUBE_SIZE*2, self.y + self.height),
-            (self.x + CUBE_SIZE*3, self.y + self.height),
-            (self.x + CUBE_SIZE*2.5, self.y)
-        ])
-        
-        # Position de l'orbe: 2 blocs au-dessus du pic central
-        orb_x = self.x + CUBE_SIZE * 1.5 - CUBE_SIZE // 4  # Centré sur le pic du milieu
+        # Position de l'orbe: 2 blocs au-dessus du pic central (3ème pic)
+        orb_x = self.x + CUBE_SIZE * 2.5 - CUBE_SIZE // 4  # Centré sur le 3ème pic (indice 2)
         orb_y = self.y - CUBE_SIZE * 2  # 2 blocs au-dessus
         orb_width = CUBE_SIZE // 2
         orb_height = CUBE_SIZE // 2
@@ -667,13 +663,13 @@ class TriplePikesWithOrb(MovingObject):
                           orb_width // 4)
         
     def get_rects(self):
-        # Hitboxes pour les 3 pics
+        # Hitboxes pour les 5 pics
         hitboxes = []
-        spike_width = self.width / 3  # Largeur d'un pic
+        spike_width = self.width / 5  # Largeur d'un pic
         reduced_size = spike_width * 0.6  # Réduire à 60% de la taille
     
         # Pour chaque pic, créer une hitbox inscrite
-        for i in range(3):
+        for i in range(5):
             x_offset = (spike_width - reduced_size) / 2
             y_offset = self.height - reduced_size * 0.8
         
@@ -684,9 +680,9 @@ class TriplePikesWithOrb(MovingObject):
                 reduced_size * 0.7
             ))
         
-        # Ajouter la hitbox de l'orbe
+        # Ajouter la hitbox de l'orbe (au-dessus du 3ème pic)
         orb_width = CUBE_SIZE // 2
-        orb_x = self.x + CUBE_SIZE * 1.5 - orb_width // 2  # Centré sur le pic du milieu
+        orb_x = self.x + CUBE_SIZE * 2.5 - orb_width // 2  # Centré sur le 3ème pic
         orb_y = self.y - CUBE_SIZE * 2  # 2 blocs au-dessus
         
         orb_rect = pygame.Rect(orb_x, orb_y, orb_width, orb_width)
@@ -695,8 +691,8 @@ class TriplePikesWithOrb(MovingObject):
         return hitboxes
     
     def check_activation(self, player, keys):
-        # Obtenir la hitbox de l'orbe (le 4ème rectangle dans la liste)
-        orb_rect = self.get_rects()[3]
+        # Obtenir la hitbox de l'orbe (le 6ème rectangle dans la liste)
+        orb_rect = self.get_rects()[5]  # Indice 5 car il y a 5 pics + 1 orbe
         
         # Vérifier si le joueur est en contact avec l'orbe et appuie sur espace
         if not self.orb_activated and player.rect.colliderect(orb_rect) and keys[pygame.K_SPACE]:
@@ -735,9 +731,9 @@ class PurpleOrb(MovingObject):
                 self.orb_pulse_alpha = 0
         
     def draw(self, screen):
-        # Position de l'orbe: au-dessus du sol
+        # Position de l'orbe: même hauteur que l'orbe jaune (2 blocs au-dessus du sol)
         orb_x = self.x + CUBE_SIZE - CUBE_SIZE // 4  # Centré sur l'obstacle
-        orb_y = self.y - CUBE_SIZE - CUBE_SIZE // 2  # 1.5 blocs au-dessus du sol
+        orb_y = self.y - CUBE_SIZE * 2  # 2 blocs au-dessus (comme l'orbe jaune)
         orb_width = CUBE_SIZE // 2
         orb_height = CUBE_SIZE // 2
         
@@ -763,10 +759,10 @@ class PurpleOrb(MovingObject):
                           orb_width // 4)
         
     def get_rects(self):
-        # Hitbox pour l'orbe
+        # Hitbox pour l'orbe (ajuster également la hitbox)
         orb_width = CUBE_SIZE // 2
         orb_x = self.x + CUBE_SIZE - orb_width // 4
-        orb_y = self.y - CUBE_SIZE - CUBE_SIZE // 2
+        orb_y = self.y - CUBE_SIZE * 2  # Mise à jour de la position Y de la hitbox
         
         orb_rect = pygame.Rect(orb_x, orb_y, orb_width, orb_width)
         return [orb_rect]

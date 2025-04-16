@@ -14,7 +14,7 @@ from klass import Block
 from klass import BlockGapBlockWithSpike
 from klass import BouncingObstacle
 from klass import DoubleBlockPillar
-from klass import TriplePikesWithOrb
+from klass import FivePikesWithOrb
 from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
 from klass import PurpleOrb
@@ -119,7 +119,7 @@ def main():
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, Block):
                 last_obstacle_right = last_obstacle.rect.right
-            elif isinstance(last_obstacle, (DoublePikes, TriplePikes, QuadruplePikes, TriplePikesWithOrb, PurpleOrb)):
+            elif isinstance(last_obstacle, (DoublePikes, TriplePikes, QuadruplePikes, FivePikesWithOrb, PurpleOrb)):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, BouncingObstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
@@ -161,7 +161,7 @@ def main():
                 elif choice < 0.7:
                     obj = QuintuplePikesWithJumpPad(WIDTH)
                 elif choice < 0.85:
-                    obj = TriplePikesWithOrb(WIDTH)
+                    obj = FivePikesWithOrb(WIDTH)
                 else:
                     obj = PurpleOrb(WIDTH)
             elif current_speed == 8:
@@ -177,7 +177,7 @@ def main():
                 elif choice < 0.6:
                     obj = BouncingObstacle(WIDTH)
                 elif choice < 0.7:
-                    obj = TriplePikesWithOrb(WIDTH)
+                    obj = FivePikesWithOrb(WIDTH)
                 elif choice < 0.85:
                     obj = PurpleOrb(WIDTH)
                 else:
@@ -213,7 +213,7 @@ def main():
                 elif choice < 0.65:
                     obj = QuadruplePikes(WIDTH)
                 elif choice < 0.75:
-                    obj = TriplePikesWithOrb(WIDTH)
+                    obj = FivePikesWithOrb(WIDTH)
                 elif choice < 0.85:
                     obj = PurpleOrb(WIDTH)
                 else:
@@ -252,7 +252,7 @@ def main():
                     objects_to_remove.append(obj)
             
             # Gestion spécifique pour le TriplePikesWithOrb
-            elif isinstance(obj, TriplePikesWithOrb):
+            elif isinstance(obj, FivePikesWithOrb):
                 # Vérifier l'activation de l'orbe
                 obj.check_activation(player, keys)
                 
