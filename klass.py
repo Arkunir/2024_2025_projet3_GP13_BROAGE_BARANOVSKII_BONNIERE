@@ -40,6 +40,23 @@ class Player:
         self.total_rotation = 0  # Pour suivre la rotation totale
         self.is_rotating = False  # Pour savoir si le joueur est en train de tourner
     
+    # Ajout des propriétés pour accéder facilement aux coordonnées
+    @property
+    def x(self):
+        return self.rect.x
+        
+    @property
+    def y(self):
+        return self.rect.y
+        
+    @property
+    def width(self):
+        return self.rect.width
+        
+    @property
+    def height(self):
+        return self.rect.height
+    
     def load_skins(self):
         skins = []
         skins_dir = "skins"  # Dossier contenant les images des skins

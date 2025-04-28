@@ -449,7 +449,8 @@ def show_menu():
     
     player_button = Button("Joueur", start_x, 200, button_width, button_height, button_color, hover_color)
     ai_reinforcement_button = Button("IA par Renforcement", start_x, 280, button_width, button_height, button_color, hover_color)
-    ai_test_button = Button("IA Test", start_x, 360, button_width, button_height, button_color, hover_color)
+    ai_train_button = Button("Entraîner l'IA", start_x, 360, button_width, button_height, button_color, hover_color)
+    ai_test_button = Button("IA Test", start_x, 440, button_width, button_height, button_color, hover_color)
     
     menu_running = True
     while menu_running:
@@ -473,21 +474,58 @@ def show_menu():
         
         player_button.update(mouse_pos)
         ai_reinforcement_button.update(mouse_pos)
+        ai_train_button.update(mouse_pos)
         ai_test_button.update(mouse_pos)
         
         player_button.draw(screen)
         ai_reinforcement_button.draw(screen)
+        ai_train_button.draw(screen)
         ai_test_button.draw(screen)
         
         if player_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
             main()
         elif ai_reinforcement_button.check_clicked(mouse_pos, mouse_clicked):
-            font = pygame.font.SysFont(None, 24)
-            info_text = font.render("Fonctionnalité non implémentée", True, RED)
-            screen.blit(info_text, (WIDTH // 2 - 120, 450))
-            pygame.display.flip()
-            pygame.time.wait(1000)
+            menu_running = False
+            # Import la fonction play_ai et l'exécute
+            try:
+                from play_reinforcement import play_ai
+                play_ai()
+            except ImportError:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render("Module de l'IA non trouvé", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 120, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            except Exception as e:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render(f"Erreur: {str(e)}", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 120, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            show_menu()
+        elif ai_train_button.check_clicked(mouse_pos, mouse_clicked):
+            menu_running = False
+            # Import la fonction train et l'exécute
+            try:
+                from train_reinforcement import train
+                pygame.quit()  # Ferme pygame temporairement pour l'entraînement
+                train()  # Lance l'entraînement
+                pygame.init()  # Réinitialise pygame après l'entraînement
+                screen = pygame.display.set_mode((WIDTH, HEIGHT))  # Recrée la fenêtre
+            except ImportError:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render("Module d'entraînement non trouvé", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 140, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            except Exception as e:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render(f"Erreur: {str(e)}", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 120, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            show_menu()
         elif ai_test_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
             ai_test_play()
@@ -495,7 +533,3 @@ def show_menu():
         
         pygame.display.flip()
         clock.tick(30)
-
-if __name__ == "__main__":
-    show_menu()    
-    pygame.quit()
