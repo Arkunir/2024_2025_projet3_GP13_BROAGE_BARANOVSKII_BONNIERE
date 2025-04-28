@@ -1004,11 +1004,12 @@ class JumppadOrbsObstacle(MovingObject):
     def __init__(self, x):
         super().__init__(x)
         self.x = x
-        self.width = CUBE_SIZE * 20  # Maintenu à 19 pour garder la largeur totale
+        self.width = CUBE_SIZE * 20  # Maintenu à 20 pour garder la largeur totale
         self.height = CUBE_SIZE * 5   # Hauteur pour les calculs de collision
         
         # Créer une instance de JumpPad
-        self.jumppad = JumpPad(x + CUBE_SIZE * 1)
+        jumppad_pos = self.adjust_position_for_speed(1)
+        self.jumppad = JumpPad(x + CUBE_SIZE * jumppad_pos)
         
         # États des orbes (séparés)
         self.yellow_orb1_activated = False
@@ -1031,10 +1032,26 @@ class JumppadOrbsObstacle(MovingObject):
         # Orbes: force du saut
         self.yellow_orb_boost = JUMP_STRENGTH * 1.2
         self.purple_orb_boost = JUMP_STRENGTH * 0.8
+    
+    def adjust_position_for_speed(self, position):
+        # Fonction utilitaire pour ajuster les positions selon la vitesse
+        if self.scroll_speed == 9:
+            return round(position * 9/8)
+        else:
+            return position
+    
+    def adjust_yellow_orb2_position(self, position):
+        # Fonction spéciale pour la deuxième orbe jaune
+        if self.scroll_speed == 9:
+            # On décale d'un bloc vers la gauche (en soustrayant 1) avant d'appliquer le facteur 9/8
+            return round((position - 1) * 9/8)
+        else:
+            return position
         
     def update(self):
         self.x -= self.scroll_speed
-        self.jumppad.x = self.x + CUBE_SIZE * 1  # Mettre à jour la position du jumppad
+        jumppad_pos = self.adjust_position_for_speed(1)
+        self.jumppad.x = self.x + CUBE_SIZE * jumppad_pos
         self.jumppad.update()  # Mettre à jour le jumppad
         
         # Gérer les animations de chaque orbe séparément
@@ -1069,6 +1086,7 @@ class JumppadOrbsObstacle(MovingObject):
         self.jumppad.draw(screen)
         
         # 2. Dessiner les pics sur le sol (toute la longueur sauf où se trouve le jumppad)
+        # Note: Les positions des pics ne sont pas modifiées selon les instructions
         for i in range(18):  # 18 pics comme avant
             # Sauter le segment où se trouve le jumppad
             if i == 0 or i == 1:
@@ -1081,6 +1099,7 @@ class JumppadOrbsObstacle(MovingObject):
             ])
         
         # 3. Dessiner les pics verticaux en l'air avec des blocs à leur droite
+        # Note: Les positions des pics ne sont pas modifiées selon les instructions
         air_spikes_x = self.x + CUBE_SIZE * 18  # Position inchangée à 18
         block_x = air_spikes_x + CUBE_SIZE  # Position des blocs à droite des pics
         
@@ -1103,10 +1122,12 @@ class JumppadOrbsObstacle(MovingObject):
                 CUBE_SIZE
             ])
         
-        # 4. Dessiner les orbes
-        # Première orbe jaune
-        yellow_orb1_x = self.x + CUBE_SIZE * 8
-        yellow_orb1_y = GROUND_HEIGHT - CUBE_SIZE * 3
+        # 4. Dessiner les orbes avec positions ajustées selon la vitesse
+        # Première orbe jaune - Position ajustée si nécessaire
+        yellow_orb1_pos = self.adjust_position_for_speed(8)
+        yellow_orb1_height = self.adjust_position_for_speed(3)
+        yellow_orb1_x = self.x + CUBE_SIZE * yellow_orb1_pos
+        yellow_orb1_y = GROUND_HEIGHT - CUBE_SIZE * yellow_orb1_height
         orb_width = CUBE_SIZE // 2
         
         # Effet de pulsation de la première orbe jaune
@@ -1123,9 +1144,11 @@ class JumppadOrbsObstacle(MovingObject):
                           (yellow_orb1_x, yellow_orb1_y), 
                           orb_width // 4)
         
-        # Deuxième orbe jaune
-        yellow_orb2_x = self.x + CUBE_SIZE * 13
-        yellow_orb2_y = GROUND_HEIGHT - CUBE_SIZE * 7
+        # Deuxième orbe jaune - Position ajustée si nécessaire avec décalage spécial
+        yellow_orb2_pos = self.adjust_yellow_orb2_position(13)
+        yellow_orb2_height = self.adjust_position_for_speed(7)
+        yellow_orb2_x = self.x + CUBE_SIZE * yellow_orb2_pos
+        yellow_orb2_y = GROUND_HEIGHT - CUBE_SIZE * yellow_orb2_height
         
         # Effet de pulsation de la deuxième orbe jaune
         if self.yellow_orb2_activated:
@@ -1141,9 +1164,11 @@ class JumppadOrbsObstacle(MovingObject):
                           (yellow_orb2_x, yellow_orb2_y), 
                           orb_width // 4)
         
-        # Orbe violette (chemin correct)
-        purple_orb_x = self.x + CUBE_SIZE * 14
-        purple_orb_y = GROUND_HEIGHT - CUBE_SIZE * 3
+        # Orbe violette (chemin correct) - Position ajustée si nécessaire
+        purple_orb_pos = self.adjust_position_for_speed(14)
+        purple_orb_height = self.adjust_position_for_speed(3)
+        purple_orb_x = self.x + CUBE_SIZE * purple_orb_pos
+        purple_orb_y = GROUND_HEIGHT - CUBE_SIZE * purple_orb_height
         
         # Effet de pulsation de l'orbe violette
         if self.purple_orb_activated:
@@ -1181,6 +1206,7 @@ class JumppadOrbsObstacle(MovingObject):
         hitboxes.append(jumppad_rect)
         
         # 2. Hitboxes des pics au sol (sauter le premier)
+        # Note: Les positions des pics ne sont pas modifiées selon les instructions
         for i in range(18):  # Maintenu à 18 comme avant
             # Sauter le segment où se trouve le jumppad
             if i == 0 or i == 1:
@@ -1200,6 +1226,7 @@ class JumppadOrbsObstacle(MovingObject):
             ))
         
         # 3. Hitboxes des pics verticaux en l'air
+        # Note: Les positions des pics ne sont pas modifiées selon les instructions
         air_spikes_x = self.x + CUBE_SIZE * 18  # Maintenu à 18 comme avant
         block_x = air_spikes_x + CUBE_SIZE  # Position des blocs à droite des pics
         
@@ -1223,20 +1250,26 @@ class JumppadOrbsObstacle(MovingObject):
                 CUBE_SIZE
             ))
         
-        # 4. Hitboxes des orbes
-        # Première orbe jaune
-        yellow_orb1_x = self.x + CUBE_SIZE * 8 - orb_width // 2
-        yellow_orb1_y = GROUND_HEIGHT - CUBE_SIZE * 3 - orb_width // 2
+        # 4. Hitboxes des orbes avec positions ajustées selon la vitesse
+        # Première orbe jaune - Position ajustée si nécessaire
+        yellow_orb1_pos = self.adjust_position_for_speed(8)
+        yellow_orb1_height = self.adjust_position_for_speed(3)
+        yellow_orb1_x = self.x + CUBE_SIZE * yellow_orb1_pos - orb_width // 2
+        yellow_orb1_y = GROUND_HEIGHT - CUBE_SIZE * yellow_orb1_height - orb_width // 2
         hitboxes.append(pygame.Rect(yellow_orb1_x, yellow_orb1_y, orb_width, orb_width))
         
-        # Deuxième orbe jaune
-        yellow_orb2_x = self.x + CUBE_SIZE * 13 - orb_width // 2
-        yellow_orb2_y = GROUND_HEIGHT - CUBE_SIZE * 7 - orb_width // 2
+        # Deuxième orbe jaune - Position ajustée si nécessaire avec décalage spécial
+        yellow_orb2_pos = self.adjust_yellow_orb2_position(13)
+        yellow_orb2_height = self.adjust_position_for_speed(7)
+        yellow_orb2_x = self.x + CUBE_SIZE * yellow_orb2_pos - orb_width // 2
+        yellow_orb2_y = GROUND_HEIGHT - CUBE_SIZE * yellow_orb2_height - orb_width // 2
         hitboxes.append(pygame.Rect(yellow_orb2_x, yellow_orb2_y, orb_width, orb_width))
         
-        # Orbe violette
-        purple_orb_x = self.x + CUBE_SIZE * 14 - orb_width // 2
-        purple_orb_y = GROUND_HEIGHT - CUBE_SIZE * 3 - orb_width // 2
+        # Orbe violette - Position ajustée si nécessaire
+        purple_orb_pos = self.adjust_position_for_speed(14)
+        purple_orb_height = self.adjust_position_for_speed(3)
+        purple_orb_x = self.x + CUBE_SIZE * purple_orb_pos - orb_width // 2
+        purple_orb_y = GROUND_HEIGHT - CUBE_SIZE * purple_orb_height - orb_width // 2
         hitboxes.append(pygame.Rect(purple_orb_x, purple_orb_y, orb_width, orb_width))
         
         return hitboxes
