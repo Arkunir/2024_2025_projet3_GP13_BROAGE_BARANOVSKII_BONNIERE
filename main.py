@@ -18,7 +18,7 @@ from klass import FivePikesWithOrb
 from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
 from klass import PurpleOrb
-from klass import JumppadOrbsObstacle  # Ajout de l'import de la nouvelle classe
+from klass import JumppadOrbsObstacle  
 
 pygame.init()
 
