@@ -2,8 +2,7 @@ import pygame
 import sys
 import random
 import os
-# Suppression de l'import problématique - à remplacer par votre propre code d'IA
-# from testiacode import ai_test_play
+from testiacode import ai_test_play
 from klass import Button
 from klass import Player
 from klass import MovingObject
@@ -40,11 +39,6 @@ GREEN = (0, 255, 0)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash Clone")
 clock = pygame.time.Clock()
-
-# Fonction temporaire pour remplacer ai_test_play
-def ai_test_play():
-    print("Fonction IA de test - à implémenter")
-    pygame.time.wait(2000)  # Attend 2 secondes pour montrer le message
 
 def main():
     player = Player()
@@ -146,8 +140,6 @@ def main():
         
         # Créer un nouvel obstacle si les conditions sont remplies
         if can_spawn_obstacle and current_time - last_object > object_interval:
-            obj = None  # Initialisation pour éviter des problèmes
-            
             if current_speed == 6:
                 choice = random.random()
                 if choice < 0.35:  # Réduire la probabilité pour faire place à notre nouvel obstacle
@@ -227,13 +219,11 @@ def main():
                 else:
                     obj = JumppadOrbsObstacle(WIDTH)  # Ajout du nouvel obstacle avec 15% de chance
                 
-            # Vérifier que obj a bien été défini avant de l'utiliser
-            if obj:
-                obj.set_speed(current_speed)
-                game_objects.append(obj)
+            obj.set_speed(current_speed)
+            game_objects.append(obj)
                 
-                last_object = current_time
-                object_interval = random.randint(*obstacle_intervals[current_speed])
+            last_object = current_time
+            object_interval = random.randint(*obstacle_intervals[current_speed])
         
         player.update(game_objects)
         
@@ -261,17 +251,17 @@ def main():
                 if obj.x + obj.width < 0:
                     objects_to_remove.append(obj)
             
-            # Gestion spécifique pour le FivePikesWithOrb
+            # Gestion spécifique pour le TriplePikesWithOrb
             elif isinstance(obj, FivePikesWithOrb):
                 # Vérifier l'activation de l'orbe
                 obj.check_activation(player, keys)
                 
                 # Vérifier les collisions avec les pics
                 for i, rect in enumerate(obj.get_rects()):
-                    if i < 5:  # Les 5 premiers rectangles sont les pics
+                    if i < 3:  # Les 3 premiers rectangles sont les pics
                         if player.rect.colliderect(rect):
                             player.is_alive = False
-                            print("Game Over! Collision avec un pic du FivePikesWithOrb")
+                            print("Game Over! Collision avec un pic du TriplePikesWithOrb")
                             running = False
                             break
                 
@@ -296,13 +286,9 @@ def main():
                 if not running:
                     break
                 
-                # Correction: vérifier si la méthode get_rects existe et traiter en conséquence
-                if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
-                    rects = obj.get_rects()
-                    if len(rects) > 4:  # Vérifier qu'il y a suffisamment de rectangles
-                        for pad_rect in rects[4:]:  # Pad rects
-                            if player.rect.colliderect(pad_rect) and hasattr(obj, 'activate_pads'):
-                                obj.activate_pads(player)
+                for pad_rect in obj.get_rects()[4:] if hasattr(obj, 'get_rects') and len(obj.get_rects()) > 4 else []:  # Pad rects
+                    if player.rect.colliderect(pad_rect):
+                        obj.activate_pads(player)
             
             elif isinstance(obj, DoublePikes):
                 for rect in obj.get_rects():
@@ -337,34 +323,27 @@ def main():
                         break
                     
             elif isinstance(obj, JumpPad):
-                # Vérifier si la méthode get_rect existe
-                if hasattr(obj, 'get_rect') and callable(getattr(obj, 'get_rect')):
-                    pad_rect = obj.get_rect()
-                    if (player.rect.bottom >= pad_rect.top and 
-                        player.rect.right > pad_rect.left and 
-                        player.rect.left < pad_rect.right):
-                        # Vérifier si la méthode activate existe
-                        if hasattr(obj, 'activate') and callable(getattr(obj, 'activate')):
-                            obj.activate(player)  # Activer le pad et appliquer le boost
+                if (player.rect.bottom >= obj.get_rect().top and 
+                    player.rect.right > obj.get_rect().left and 
+                    player.rect.left < obj.get_rect().right):
+        
+                    obj.activate(player)  # Activer le pad et appliquer le boost
             
             elif isinstance(obj, QuintuplePikesWithJumpPad):
-                if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
-                    rects = obj.get_rects()
-                    if len(rects) > 0:  # S'assurer qu'il y a des rectangles
-                        jumppad_rect = rects[-1]  # Le dernier rectangle est le jumppad
-                        
-                        # Vérifier la collision avec le jumppad
-                        if player.rect.colliderect(jumppad_rect):
-                            if hasattr(obj, 'activate_jump_pad') and callable(getattr(obj, 'activate_jump_pad')):
-                                obj.activate_jump_pad(player)
-                        
-                        # Vérifier les collisions avec les pics (indices 5 à 9 sont les pics après les 5 blocs)
-                        for i in range(5, min(10, len(rects))):
-                            if player.rect.colliderect(rects[i]):
-                                player.is_alive = False
-                                print("Game Over! Collision avec un pic quintuple")
-                                running = False
-                                break
+                rects = obj.get_rects()
+                jumppad_rect = rects[-1]  # Le dernier rectangle est le jumppad
+                
+                # Vérifier la collision avec le jumppad
+                if player.rect.colliderect(jumppad_rect):
+                    obj.activate_jump_pad(player)
+                
+                # Vérifier les collisions avec les pics (indices 5 à 9 sont les pics après les 5 blocs)
+                for i in range(5, 10):
+                    if i < len(rects) and player.rect.colliderect(rects[i]):
+                        player.is_alive = False
+                        print("Game Over! Collision avec un pic quintuple")
+                        running = False
+                        break
                     
             # Vérifier si l'objet est hors de l'écran pour le marquer pour suppression
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
@@ -432,8 +411,7 @@ def main():
                 # Vérifier si la vitesse a changé
                 if current_speed != previous_speed:
                     print(f"Changement de vitesse détecté: {previous_speed} -> {current_speed}")
-                    if hasattr(player, 'change_skin_randomly') and callable(getattr(player, 'change_skin_randomly')):
-                        player.change_skin_randomly()
+                    player.change_skin_randomly()
                     previous_speed = current_speed
         
         screen.fill(WHITE)
@@ -507,6 +485,47 @@ def show_menu():
         if player_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
             main()
+        elif ai_reinforcement_button.check_clicked(mouse_pos, mouse_clicked):
+            menu_running = False
+            # Import la fonction play_ai et l'exécute
+            try:
+                from play_reinforcement import play_ai
+                play_ai()
+            except ImportError:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render("Module de l'IA non trouvé", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 120, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            except Exception as e:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render(f"Erreur: {str(e)}", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 120, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            show_menu()
+        elif ai_train_button.check_clicked(mouse_pos, mouse_clicked):
+            menu_running = False
+            # Import la fonction train et l'exécute
+            try:
+                from train_reinforcement import train
+                pygame.quit()  # Ferme pygame temporairement pour l'entraînement
+                train()  # Lance l'entraînement
+                pygame.init()  # Réinitialise pygame après l'entraînement
+                screen = pygame.display.set_mode((WIDTH, HEIGHT))  # Recrée la fenêtre
+            except ImportError:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render("Module d'entraînement non trouvé", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 140, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            except Exception as e:
+                font = pygame.font.SysFont(None, 24)
+                info_text = font.render(f"Erreur: {str(e)}", True, RED)
+                screen.blit(info_text, (WIDTH // 2 - 120, 500))
+                pygame.display.flip()
+                pygame.time.wait(2000)
+            show_menu()
         elif ai_test_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
             ai_test_play()
@@ -514,7 +533,3 @@ def show_menu():
         
         pygame.display.flip()
         clock.tick(30)
-
-# Démarrer le menu principal si exécuté directement
-if __name__ == "__main__":
-    show_menu()
