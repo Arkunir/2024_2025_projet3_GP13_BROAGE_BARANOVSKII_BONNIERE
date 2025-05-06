@@ -2,7 +2,6 @@ import pygame
 import sys
 import random
 import os
-from testiacode import ai_test_play
 from klass import Button
 from klass import Player
 from klass import MovingObject
@@ -525,10 +524,6 @@ def show_menu():
                 screen.blit(info_text, (WIDTH // 2 - 120, 500))
                 pygame.display.flip()
                 pygame.time.wait(2000)
-            show_menu()
-        elif ai_test_button.check_clicked(mouse_pos, mouse_clicked):
-            menu_running = False
-            ai_test_play()
             show_menu()
         
         pygame.display.flip()
