@@ -225,10 +225,10 @@ def main():
             object_interval = random.randint(*obstacle_intervals[current_speed])
         
         player.update(game_objects)
+        print(f"Player alive status: {player.is_alive}, Player position: {player.rect.topleft}")
         
         if not player.is_alive:
             print("Game Over! Score:", score)
-            running = False
         
         # Créer une copie de la liste pour éviter les problèmes de modification pendant l'itération
         objects_to_remove = []
