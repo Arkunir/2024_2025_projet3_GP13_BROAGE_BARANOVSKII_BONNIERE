@@ -2,8 +2,8 @@ import pygame
 import sys
 import random
 import os
-# Suppression de l'import problématique - à remplacer par votre propre code d'IA
-# from testiacode import ai_test_play
+# Import du module d'IA par renforcement
+from renforcement_ai import ai_reinforcement_play, best_ai_play
 from klass import Button
 from klass import Player
 from klass import MovingObject
@@ -40,15 +40,6 @@ GREEN = (0, 255, 0)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash Clone")
 clock = pygame.time.Clock()
-
-# Fonctions temporaires pour les modes d'IA
-def ai_reinforcement_play():
-    print("Mode IA par renforcement - à implémenter")
-    pygame.time.wait(2000)  # Attend 2 secondes pour montrer le message
-    
-def best_ai_play():
-    print("Mode meilleure IA - à implémenter")
-    pygame.time.wait(2000)  # Attend 2 secondes pour montrer le message
 
 def main():
     player = Player()
@@ -465,6 +456,76 @@ def main():
         clock.tick(FPS)
     
     show_menu()
+
+def run_ai_reinforcement():
+    """Fonction intermédiaire pour lancer le mode IA par renforcement"""
+    pygame.quit()  # Fermer la fenêtre pygame actuelle
+    
+    # Afficher un message d'information
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Geometry Dash Clone - IA par Renforcement")
+    
+    font = pygame.font.SysFont(None, 36)
+    info_text1 = font.render("Lancement du mode IA par renforcement...", True, BLACK)
+    info_text2 = font.render("Appuyez sur une touche pour continuer", True, BLACK)
+    
+    screen.fill(WHITE)
+    screen.blit(info_text1, (WIDTH // 2 - info_text1.get_width() // 2, HEIGHT // 2 - 50))
+    screen.blit(info_text2, (WIDTH // 2 - info_text2.get_width() // 2, HEIGHT // 2 + 10))
+    pygame.display.flip()
+    
+    # Attendre que l'utilisateur appuie sur une touche
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                waiting = False
+    
+    # Lancer l'entraînement avec 100 épisodes (peut être ajusté)
+    pygame.quit()
+    ai_reinforcement_play(training_mode=True, episodes=100)
+    
+    pygame.init()
+    show_menu()
+
+def run_best_ai():
+    """Fonction intermédiaire pour lancer le mode meilleure IA"""
+    pygame.quit()  # Fermer la fenêtre pygame actuelle
+    
+    # Afficher un message d'information
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Geometry Dash Clone - Meilleure IA")
+    
+    font = pygame.font.SysFont(None, 36)
+    info_text1 = font.render("Lancement du mode meilleure IA...", True, BLACK)
+    info_text2 = font.render("Appuyez sur une touche pour continuer", True, BLACK)
+    
+    screen.fill(WHITE)
+    screen.blit(info_text1, (WIDTH // 2 - info_text1.get_width() // 2, HEIGHT // 2 - 50))
+    screen.blit(info_text2, (WIDTH // 2 - info_text2.get_width() // 2, HEIGHT // 2 + 10))
+    pygame.display.flip()
+    
+    # Attendre que l'utilisateur appuie sur une touche
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                waiting = False
+    
+    # Lancer la démonstration de la meilleure IA
+    pygame.quit()
+    best_ai_play()
+    
+    pygame.init()
+    show_menu()
     
 def show_menu():
     button_color = (200, 200, 200)
@@ -511,12 +572,10 @@ def show_menu():
             main()
         elif reinforcement_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
-            ai_reinforcement_play()
-            show_menu()
+            run_ai_reinforcement()  # Utiliser la nouvelle fonction intermédiaire
         elif best_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
-            best_ai_play()
-            show_menu()
+            run_best_ai()  # Utiliser la nouvelle fonction intermédiaire
         
         pygame.display.flip()
         clock.tick(30)
