@@ -23,7 +23,7 @@ from klass import JumppadOrbsObstacle
 
 pygame.init()
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 2200, 1000
 FPS = 60
 GRAVITY = 1
 JUMP_STRENGTH = -18
