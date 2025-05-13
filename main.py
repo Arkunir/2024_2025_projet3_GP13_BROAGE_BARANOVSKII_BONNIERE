@@ -20,6 +20,7 @@ from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
 from klass import PurpleOrb
 from klass import JumppadOrbsObstacle  
+from ia_reinforcement import ai_reinforcement_play, best_ai_play
 
 pygame.init()
 
@@ -41,14 +42,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash Clone")
 clock = pygame.time.Clock()
 
-# Fonctions temporaires pour les modes d'IA
-def ai_reinforcement_play():
-    print("Mode IA par renforcement - à implémenter")
-    pygame.time.wait(2000)  # Attend 2 secondes pour montrer le message
-    
-def best_ai_play():
-    print("Mode meilleure IA - à implémenter")
-    pygame.time.wait(2000)  # Attend 2 secondes pour montrer le message
+# Suppression des fonctions temporaires pour utiliser celles importées du module ia_reinforcement
 
 def main():
     player = Player()
@@ -511,10 +505,12 @@ def show_menu():
             main()
         elif reinforcement_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
+            # Utilisation de la fonction importée du module ia_reinforcement
             ai_reinforcement_play()
             show_menu()
         elif best_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
+            # Utilisation de la fonction importée du module ia_reinforcement
             best_ai_play()
             show_menu()
         
