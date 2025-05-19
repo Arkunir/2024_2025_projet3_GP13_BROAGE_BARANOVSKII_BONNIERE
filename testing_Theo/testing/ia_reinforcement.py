@@ -110,31 +110,35 @@ class GeometryDashAI:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
     
-    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf')):
+    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False):
         if not player_alive:
             return -100  # Grosse récompense négative pour la mort
-        
+    
         reward = 0
-        
+    
         # Petite récompense pour le défilement automatique (survie)
         reward += 0.05
-        
+    
         # Grosse récompense pour les obstacles franchis
         if obstacle_passed:
             reward += 15
-        
+    
+        # Récompense importante pour avoir touché un jumppad
+        if jumppad_touched:
+            reward += 25  # Récompense significative pour encourager l'utilisation des JumpPad
+    
         # Pénalité pour les sauts inutiles
         if is_jumping and distance_to_obstacle > 150:
             reward -= 10  # Pénalité pour les sauts inutiles
-        
+    
         # Récompense pour s'approcher d'un obstacle sans mourir
         if distance_to_obstacle < 200:
             reward += (1 - distance_to_obstacle / 200) * 2
-        
+    
         # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
             reward += 1
-        
+    
         return reward
     
     def save_model(self):
