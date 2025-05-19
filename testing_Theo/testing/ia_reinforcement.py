@@ -110,25 +110,30 @@ class GeometryDashAI:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
     
-    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0):
+    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf')):
         if not player_alive:
-            return -100
+            return -100  # Grosse récompense négative pour la mort
         
         reward = 0
         
-        reward += 0.1
+        # Petite récompense pour le défilement automatique (survie)
+        reward += 0.05
         
+        # Grosse récompense pour les obstacles franchis
         if obstacle_passed:
-            reward += 10
+            reward += 15
         
+        # Pénalité pour les sauts inutiles
+        if is_jumping and distance_to_obstacle > 150:
+            reward -= 10  # Pénalité pour les sauts inutiles
+        
+        # Récompense pour s'approcher d'un obstacle sans mourir
         if distance_to_obstacle < 200:
             reward += (1 - distance_to_obstacle / 200) * 2
         
+        # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
             reward += 1
-        
-        if distance_to_obstacle > 300 and player_y < ground_height - 20:
-            reward -= 0.5
         
         return reward
     
@@ -515,7 +520,9 @@ def ai_reinforcement_play():
                 obstacle_passed,
                 player.y,
                 GROUND_HEIGHT,
-                obstacle_height
+                obstacle_height,
+                player.is_jumping,  # Ajout du paramètre indiquant si le joueur est en train de sauter
+                current_distance    # Utiliser current_distance comme nearest_obstacle_distance
             )
             
             is_done = not player.is_alive or not running
