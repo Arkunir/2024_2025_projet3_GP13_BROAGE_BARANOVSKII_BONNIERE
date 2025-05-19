@@ -261,7 +261,27 @@ def find_obstacles(game_objects, player_x):
 
 
 def check_collision(obj, player):
-    if isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
+    # Vérifier d'abord les jumppads pour appliquer l'effet de saut
+    if isinstance(obj, JumpPad):
+        if player.rect.colliderect(obj.get_rect()):
+            # Appliquer l'effet de saut
+            player.velocity_y = -25  # Force de saut plus forte que le saut normal
+            return "jumppad"  # Retourner un indicateur spécial
+    
+    elif isinstance(obj, QuintuplePikesWithJumpPad):
+        if hasattr(obj, 'get_rects'):
+            rects = obj.get_rects()
+            # Vérifier collision avec le jumppad (généralement le premier rect)
+            if len(rects) > 0 and player.rect.colliderect(rects[0]):
+                player.velocity_y = -25
+                return "jumppad"
+            # Vérifier collision avec les pikes (rects 5 à 9)
+            for i in range(5, min(10, len(rects))):
+                if player.rect.colliderect(rects[i]):
+                    return True
+    
+    # Vérifier les autres collisions mortelles
+    elif isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
         return True
     elif isinstance(obj, Block) and player.rect.colliderect(obj.rect):
         return True
@@ -277,12 +297,6 @@ def check_collision(obj, player):
         for i, rect in enumerate(obj.get_rects()):
             if i < 5 and player.rect.colliderect(rect):
                 return True
-    elif isinstance(obj, QuintuplePikesWithJumpPad):
-        if hasattr(obj, 'get_rects'):
-            rects = obj.get_rects()
-            for i in range(5, min(10, len(rects))):
-                if player.rect.colliderect(rects[i]):
-                    return True
     elif isinstance(obj, JumppadOrbsObstacle):
         if obj.check_collision(player, [False] * 323):
             return True
@@ -477,7 +491,13 @@ def ai_reinforcement_play():
             for obj in game_objects[:]:
                 obj.update()
                 
-                if check_collision(obj, player):
+                collision_result = check_collision(obj, player)
+                
+                if collision_result == "jumppad":
+                    # Le jumppad a été utilisé, on peut continuer
+                    pass
+                elif collision_result == True:
+                    # Collision mortelle
                     player.is_alive = False
                     running = False
                     break
