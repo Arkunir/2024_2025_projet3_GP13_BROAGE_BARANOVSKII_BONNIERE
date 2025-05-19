@@ -17,42 +17,7 @@ from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
 from klass import PurpleOrb
 from klass import JumppadOrbsObstacle  
-# Nous allons créer nos propres versions des fonctions IA
-# from ia_reinforcement import ai_reinforcement_play, best_ai_play
-
-def ai_reinforcement_play_v2():
-    """Version 2.0 de l'IA par renforcement utilisant le main 2.0"""
-    # Import local pour éviter les conflits
-    import ia_reinforcement
-    
-    # Remplacer temporairement la fonction main dans le module ia_reinforcement
-    original_main = getattr(ia_reinforcement, 'main', None)
-    ia_reinforcement.main = main
-    
-    try:
-        # Exécuter l'IA par renforcement avec notre main 2.0
-        ia_reinforcement.ai_reinforcement_play()
-    finally:
-        # Restaurer la fonction main originale
-        if original_main:
-            ia_reinforcement.main = original_main
-
-def best_ai_play_v2():
-    """Version 2.0 de la meilleure IA utilisant le main 2.0"""
-    # Import local pour éviter les conflits
-    import ia_reinforcement
-    
-    # Remplacer temporairement la fonction main dans le module ia_reinforcement
-    original_main = getattr(ia_reinforcement, 'main', None)
-    ia_reinforcement.main = main
-    
-    try:
-        # Exécuter la meilleure IA avec notre main 2.0
-        ia_reinforcement.best_ai_play()
-    finally:
-        # Restaurer la fonction main originale
-        if original_main:
-            ia_reinforcement.main = original_main
+from ia_reinforcement import ai_reinforcement_play, best_ai_play
 
 pygame.init()
 
@@ -500,11 +465,11 @@ def show_menu():
             main()
         elif reinforcement_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
-            ai_reinforcement_play_v2()
+            ai_reinforcement_play()
             show_menu()
         elif best_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
-            best_ai_play_v2()
+            best_ai_play()
             show_menu()
         
         pygame.display.flip()
