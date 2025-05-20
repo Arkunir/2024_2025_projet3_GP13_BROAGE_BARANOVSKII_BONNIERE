@@ -30,10 +30,10 @@ Conditions d'exécution : Assurez-vous d'avoir **Python installé** sur votre ma
 
 ### Status:  
 Travail en cour:
-- Implémenté l'IA
 - train l'ia
 
 Travail fini:
+- Implémenté l'IA
 - corps du jeu
 - menu
 
