@@ -40,7 +40,7 @@ class GeometryDashAI:
         self.high_score = 0
         self.last_scores = deque(maxlen=100)
         
-        self.model_path = 'geometry_dash_ai_model.pkl'
+        self.model_path = 'geometry_dash_ai_model2.pkl'
         if load_model and os.path.exists(self.model_path):
             self.load_model()
     
