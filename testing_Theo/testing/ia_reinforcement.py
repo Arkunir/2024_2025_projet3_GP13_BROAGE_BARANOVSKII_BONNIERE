@@ -18,8 +18,6 @@ from klass import DoubleBlockPillar
 from klass import FivePikesWithOrb
 from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
-from klass import PurpleOrb
-from klass import JumppadOrbsObstacle
 
 class GeometryDashAI:
     def __init__(self, state_size=8, action_size=2, load_model=True):
@@ -28,8 +26,8 @@ class GeometryDashAI:
         
         self.gamma = 0.99
         self.epsilon = 1.0
-        self.epsilon_min = 0.05
-        self.epsilon_decay = 0.9995
+        self.epsilon_min = 0.002
+        self.epsilon_decay = 0.9997
         self.learning_rate = 0.01
         
         self.memory = deque(maxlen=10000)
@@ -128,14 +126,10 @@ class GeometryDashAI:
             reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
     
         # Pénalité pour les sauts inutiles
-        if is_jumping and distance_to_obstacle > 200:
-            reward -= 1
+        if is_jumping and distance_to_obstacle > 170:
+            reward -= 10
         else:
-            reward += 1  # Pénalité pour les sauts inutiles
-    
-        # Récompense pour s'approcher d'un obstacle sans mourir
-        if distance_to_obstacle < 200:
-            reward += (1 - distance_to_obstacle / 200) * 2
+            reward += 10  # Pénalité pour les sauts inutiles
     
         # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
@@ -232,16 +226,6 @@ def get_obstacle_data(obj):
         obj_width = obj.width
         obj_height = 150
         obstacle_type = 11
-    elif isinstance(obj, PurpleOrb):
-        obj_x = obj.x
-        obj_width = obj.width
-        obj_height = 50
-        obstacle_type = 12
-    elif isinstance(obj, JumppadOrbsObstacle):
-        obj_x = obj.x
-        obj_width = obj.width
-        obj_height = 150
-        obstacle_type = 13
     
     return obj_x, obj_width, obj_height, obstacle_type
 
@@ -294,9 +278,6 @@ def check_collision(obj, player):
             for i in range(5, min(10, len(rects))):
                 if player.rect.colliderect(rects[i]):
                     return True
-    elif isinstance(obj, JumppadOrbsObstacle):
-        if obj.check_collision(player, [False] * 323):
-            return True
     
     return False
 
@@ -464,10 +445,8 @@ def ai_reinforcement_play():
                         obj = DoublePikes(WIDTH)
                     elif choice < 0.5:
                         obj = BlockGapBlockWithSpike(WIDTH)
-                    elif choice < 0.7:
-                        obj = PurpleOrb(WIDTH)
                     else:
-                        obj = JumppadOrbsObstacle(WIDTH)
+                        obj = Obstacle
                 
                 if obj:
                     obj.set_speed(current_speed)
