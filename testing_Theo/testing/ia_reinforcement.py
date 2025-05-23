@@ -129,7 +129,9 @@ class GeometryDashAI:
     
         # Pénalité pour les sauts inutiles
         if is_jumping and distance_to_obstacle > 150:
-            reward -= 10  # Pénalité pour les sauts inutiles
+            reward -= 10
+        else:
+            reward += 10  # Pénalité pour les sauts inutiles
     
         # Récompense pour s'approcher d'un obstacle sans mourir
         if distance_to_obstacle < 200:
