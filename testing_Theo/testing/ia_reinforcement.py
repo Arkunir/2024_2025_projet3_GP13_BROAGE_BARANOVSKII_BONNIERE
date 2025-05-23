@@ -112,7 +112,7 @@ class GeometryDashAI:
     
     def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False):
         if not player_alive:
-            return -100  # Grosse récompense négative pour la mort
+            return -1000  # Grosse récompense négative pour la mort
     
         reward = 0
     
@@ -128,10 +128,10 @@ class GeometryDashAI:
             reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
     
         # Pénalité pour les sauts inutiles
-        if is_jumping and distance_to_obstacle > 150:
-            reward -= 10
+        if is_jumping and distance_to_obstacle > 200:
+            reward -= 1
         else:
-            reward += 10  # Pénalité pour les sauts inutiles
+            reward += 1  # Pénalité pour les sauts inutiles
     
         # Récompense pour s'approcher d'un obstacle sans mourir
         if distance_to_obstacle < 200:
