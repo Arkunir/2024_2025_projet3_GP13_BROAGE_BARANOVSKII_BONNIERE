@@ -15,8 +15,6 @@ from klass import BouncingObstacle
 from klass import DoubleBlockPillar
 from klass import FivePikesWithOrb
 from klass import JumpPad
-from klass import QuintuplePikesWithJumpPad
-from klass import PurpleOrb
 from klass import JumppadOrbsObstacle  
 from ia_reinforcement import ai_reinforcement_play, best_ai_play
 
@@ -115,7 +113,7 @@ def main():
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, Block):
                 last_obstacle_right = last_obstacle.rect.right
-            elif isinstance(last_obstacle, (DoublePikes, TriplePikes, QuadruplePikes, FivePikesWithOrb, PurpleOrb)):
+            elif isinstance(last_obstacle, (DoublePikes, TriplePikes, QuadruplePikes, FivePikesWithOrb)):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, BouncingObstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
@@ -124,8 +122,6 @@ def main():
             elif isinstance(last_obstacle, BlockGapBlockWithSpike):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, JumpPad):
-                last_obstacle_right = last_obstacle.x + last_obstacle.width
-            elif isinstance(last_obstacle, QuintuplePikesWithJumpPad):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, JumppadOrbsObstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
@@ -142,10 +138,8 @@ def main():
                     obj = Obstacle(WIDTH)
                 elif choice < 0.5:
                     obj = JumpPad(WIDTH)
-                elif choice < 0.65:
-                    obj = Block(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)
+                    obj = Block(WIDTH)
             elif current_speed == 7:
                 choice = random.random()
                 if choice < 0.15:
@@ -154,12 +148,8 @@ def main():
                     obj = Block(WIDTH)
                 elif choice < 0.5:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.7:
-                    obj = QuintuplePikesWithJumpPad(WIDTH)
-                elif choice < 0.85:
-                    obj = FivePikesWithOrb(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)
+                    obj = FivePikesWithOrb(WIDTH)
             elif current_speed == 8:
                 choice = random.random()
                 if choice < 0.1:
@@ -174,8 +164,6 @@ def main():
                     obj = BouncingObstacle(WIDTH)
                 elif choice < 0.7:
                     obj = FivePikesWithOrb(WIDTH)
-                elif choice < 0.85:
-                    obj = PurpleOrb(WIDTH)
                 else:
                     obj = JumppadOrbsObstacle(WIDTH)
             elif current_speed == 9:
@@ -194,8 +182,6 @@ def main():
                     obj = DoubleBlockPillar(WIDTH)
                 elif choice < 0.6:
                     obj = QuadruplePikes(WIDTH)
-                elif choice < 0.75:
-                    obj = PurpleOrb(WIDTH)
                 else:
                     obj = JumppadOrbsObstacle(WIDTH)
             elif current_speed >= 10:
@@ -210,8 +196,6 @@ def main():
                     obj = QuadruplePikes(WIDTH)
                 elif choice < 0.75:
                     obj = FivePikesWithOrb(WIDTH)
-                elif choice < 0.85:
-                    obj = PurpleOrb(WIDTH)
                 else:
                     obj = JumppadOrbsObstacle(WIDTH)
                 
@@ -253,12 +237,6 @@ def main():
                             print("Game Over! Collision avec un pic du FivePikesWithOrb")
                             running = False
                             break
-                
-                if obj.x + obj.width < 0:
-                    objects_to_remove.append(obj)
-            
-            elif isinstance(obj, PurpleOrb):
-                obj.check_activation(player, keys)
                 
                 if obj.x + obj.width < 0:
                     objects_to_remove.append(obj)
@@ -319,22 +297,8 @@ def main():
                         if hasattr(obj, 'activate') and callable(getattr(obj, 'activate')):
                             obj.activate(player)
             
-            elif isinstance(obj, QuintuplePikesWithJumpPad):
-                if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
-                    rects = obj.get_rects()
-                    if len(rects) > 0:
-                        jumppad_rect = rects[-1]
-                        
-                        if player.rect.colliderect(jumppad_rect):
-                            if hasattr(obj, 'activate_jump_pad') and callable(getattr(obj, 'activate_jump_pad')):
-                                obj.activate_jump_pad(player)
-                        
-                        for i in range(5, min(10, len(rects))):
-                            if player.rect.colliderect(rects[i]):
-                                player.is_alive = False
-                                print("Game Over! Collision avec un pic quintuple")
-                                running = False
-                                break
+
+                break
                     
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
@@ -342,8 +306,7 @@ def main():
                 (isinstance(obj, BouncingObstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, DoubleBlockPillar) and obj.x + obj.width < 0) or
                 (isinstance(obj, JumpPad) and obj.x + obj.width < 0) or
-                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0) or
-                (isinstance(obj, QuintuplePikesWithJumpPad) and obj.x + obj.width < 0)):
+                (isinstance(obj, BlockGapBlockWithSpike) and obj.x + obj.width < 0)):
                 objects_to_remove.append(obj)
         
         for obj in objects_to_remove:
