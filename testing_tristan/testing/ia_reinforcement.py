@@ -125,7 +125,7 @@ class GeometryDashAI:
     
         # Récompense importante pour avoir touché un jumppad
         if jumppad_touched:
-            reward += 25  # Récompense significative pour encourager l'utilisation des JumpPad
+            reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
     
         # Pénalité pour les sauts inutiles
         if is_jumping and distance_to_obstacle > 150:

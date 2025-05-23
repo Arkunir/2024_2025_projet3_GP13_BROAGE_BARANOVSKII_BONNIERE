@@ -40,7 +40,7 @@ class GeometryDashAI:
         self.high_score = 0
         self.last_scores = deque(maxlen=100)
         
-        self.model_path = 'geometry_dash_ai_modelv3.pkl'
+        self.model_path = 'geometry_dash_ai_modelv01.pkl'
         if load_model and os.path.exists(self.model_path):
             self.load_model()
     
@@ -125,11 +125,13 @@ class GeometryDashAI:
     
         # Récompense importante pour avoir touché un jumppad
         if jumppad_touched:
-            reward += 25  # Récompense significative pour encourager l'utilisation des JumpPad
+            reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
     
         # Pénalité pour les sauts inutiles
         if is_jumping and distance_to_obstacle > 150:
-            reward -= 10  # Pénalité pour les sauts inutiles
+            reward -= 10
+        else:
+            reward += 10  # Pénalité pour les sauts inutiles
     
         # Récompense pour s'approcher d'un obstacle sans mourir
         if distance_to_obstacle < 200:
@@ -486,10 +488,38 @@ def ai_reinforcement_play():
             for obj in game_objects[:]:
                 obj.update()
                 
-                if check_collision(obj, player):
-                    player.is_alive = False
-                    running = False
-                    break
+                # Gestion spécifique pour le JumpPad
+                if isinstance(obj, JumpPad):
+                    if hasattr(obj, 'get_rect') and callable(getattr(obj, 'get_rect')):
+                        pad_rect = obj.get_rect()
+                        if (player.rect.bottom >= pad_rect.top and 
+                            player.rect.right > pad_rect.left and 
+                            player.rect.left < pad_rect.right):
+                            if hasattr(obj, 'activate') and callable(getattr(obj, 'activate')):
+                                obj.activate(player)
+                
+                # Gestion spécifique pour QuintuplePikesWithJumpPad
+                elif isinstance(obj, QuintuplePikesWithJumpPad):
+                    if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
+                        rects = obj.get_rects()
+                        if len(rects) > 0:
+                            jumppad_rect = rects[-1]
+                            if player.rect.colliderect(jumppad_rect):
+                                if hasattr(obj, 'activate_jump_pad') and callable(getattr(obj, 'activate_jump_pad')):
+                                    obj.activate_jump_pad(player)
+                        
+                        for i in range(5, min(10, len(rects))):
+                            if player.rect.colliderect(rects[i]):
+                                player.is_alive = False
+                                print("Game Over! Collision avec un pic quintuple")
+                                running = False
+                                break
+                
+                else:
+                    if check_collision(obj, player):
+                        player.is_alive = False
+                        running = False
+                        break
                 
                 if is_offscreen(obj):
                     objects_to_remove.append(obj)
