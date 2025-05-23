@@ -108,33 +108,33 @@ class GeometryDashAI:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
     
-    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False):
+    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False, obstacle_type=0):
         if not player_alive:
             return -1000  # Grosse récompense négative pour la mort
-    
+
         reward = 0
-    
+
         # Petite récompense pour le défilement automatique (survie)
         reward += 0.05
-    
-        # Grosse récompense pour les obstacles franchis
-        if obstacle_passed:
+
+        # Grosse récompense pour les obstacles franchis (sauf JumpPad)
+        if obstacle_passed and obstacle_type != 9:  # 9 est le type pour JumpPad
             reward += 15
-    
+
         # Récompense importante pour avoir touché un jumppad
         if jumppad_touched:
             reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
-    
+
         # Pénalité pour les sauts inutiles
         if is_jumping and distance_to_obstacle > 170:
             reward -= 10
         else:
             reward += 10  # Pénalité pour les sauts inutiles
-    
+
         # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
             reward += 1
-    
+
         return reward
     
     def save_model(self):
@@ -437,8 +437,8 @@ def ai_reinforcement_play():
                         obj = JumpPad(WIDTH)
                     elif choice < 0.65:
                         obj = Block(WIDTH)
-                    else:
-                        obj = PurpleOrb(WIDTH)
+                    # else:
+                    #     obj = PurpleOrb(WIDTH)
                 else:
                     choice = random.random()
                     if choice < 0.3:
@@ -446,7 +446,7 @@ def ai_reinforcement_play():
                     elif choice < 0.5:
                         obj = BlockGapBlockWithSpike(WIDTH)
                     else:
-                        obj = Obstacle
+                        obj = Obstacle(WIDTH)
                 
                 if obj:
                     obj.set_speed(current_speed)
@@ -740,26 +740,54 @@ def best_ai_play():
         if can_spawn_obstacle and current_time - last_object > object_interval:
             obj = None
             
-            if current_speed <= 6:
+            if current_speed == 6:
                 choice = random.random()
                 if choice < 0.35:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.5:
+                elif choice < 0.6:
                     obj = JumpPad(WIDTH)
-                elif choice < 0.65:
-                    obj = Block(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)
-            else:
+                    obj = Block(WIDTH)
+            elif current_speed == 7:
                 choice = random.random()
-                if choice < 0.3:
+                if choice < 0.2:
+                    obj = Obstacle(WIDTH)
+                elif choice < 0.4:
+                    obj = JumpPad(WIDTH)
+                elif choice < 0.6:
+                    obj = QuintuplePikesWithJumpPad(WIDTH)
+                elif choice < 0.8:
+                    obj = DoublePikes(WIDTH)
+                else:
+                    obj = Block(WIDTH)
+            elif current_speed == 8:
+                choice = random.random()
+                if choice < 0.2:
+                    obj = Obstacle(WIDTH)
+                elif choice < 0.4:
+                    obj = DoublePikes(WIDTH)
+                elif choice < 0.55:
+                    obj = DoubleBlockPillar(WIDTH)
+                elif choice < 0.8:
+                    obj = BlockGapBlockWithSpike(WIDTH)
+                else:
+                    obj = BouncingObstacle(WIDTH)
+            elif current_speed >= 9:
+                choice = random.random()
+                if choice < 0.1:
+                    obj = Obstacle(WIDTH)
+                elif choice < 0.2:
+                    obj = Block(WIDTH)
+                elif choice < 0.35:
                     obj = DoublePikes(WIDTH)
                 elif choice < 0.5:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.7:
-                    obj = PurpleOrb(WIDTH)
+                elif choice < 0.65:
+                    obj = TriplePikes(WIDTH)
+                elif choice < 0.8:
+                    obj = DoubleBlockPillar(WIDTH)
                 else:
-                    obj = JumppadOrbsObstacle(WIDTH)
+                    obj = QuadruplePikes(WIDTH)
             
             if obj:
                 obj.set_speed(current_speed)
