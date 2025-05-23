@@ -1,8 +1,8 @@
 # GP13_BROAGE_BARANOVSKII_BONNIERE
- projet 3 de NSI, création d'une IA complétant une version abrogée de geometry dash
+Projet 3 de NSI, création d'une IA complétant une version abrogée de geometry dash
 
 ### Description:
-Ce projet est une version originale de Geometry Dash fait de nos propre moyen, un jeu de plateforme classique.  
+Ce projet est une version originale de Geometry Dash fait de nos propre moyen, un jeu de plateforme classique qui a pour but de sauter au dessus de certain obstacles.  
 Le jeu est composé d'un mode infinie avec un système de niveau de vitesse, au bout d'un certain nombre de point récupérer votre vitesse peu augmenter.  
 Le jeu est également composé d'une IA qui peut jouer le jeu.  
 
@@ -27,6 +27,8 @@ Conditions d'exécution : Assurez-vous d'avoir **Python installé** sur votre ma
 - Installer : Python
 
 - Dans la console faire les commandes suivantes: `pip install pygame` et `pip install numpy`
+
+- Une fois le code lancé choisissez votre mode de jeu 'IA' ou 'Joueur'. Pour sauter au dessus des obstacles vous devez appuyer sur la touche 'Espace'.  
 
 ### Status:  
 Travail en cour:
