@@ -17,8 +17,6 @@ from klass import BouncingObstacle
 from klass import DoubleBlockPillar
 from klass import FivePikesWithOrb
 from klass import JumpPad
-from klass import QuintuplePikesWithJumpPad
-from klass import PurpleOrb
 from klass import JumppadOrbsObstacle
 
 class GeometryDashAI:
@@ -220,21 +218,11 @@ def get_obstacle_data(obj):
         obj_width = obj.width
         obj_height = 50
         obstacle_type = 9
-    elif isinstance(obj, QuintuplePikesWithJumpPad):
-        obj_x = obj.x
-        obj_width = obj.width
-        obj_height = 150
-        obstacle_type = 10
     elif isinstance(obj, FivePikesWithOrb):
         obj_x = obj.x
         obj_width = obj.width
         obj_height = 150
         obstacle_type = 11
-    elif isinstance(obj, PurpleOrb):
-        obj_x = obj.x
-        obj_width = obj.width
-        obj_height = 50
-        obstacle_type = 12
     elif isinstance(obj, JumppadOrbsObstacle):
         obj_x = obj.x
         obj_width = obj.width
@@ -286,12 +274,6 @@ def check_collision(obj, player):
         for i, rect in enumerate(obj.get_rects()):
             if i < 5 and player.rect.colliderect(rect):
                 return True
-    elif isinstance(obj, QuintuplePikesWithJumpPad):
-        if hasattr(obj, 'get_rects'):
-            rects = obj.get_rects()
-            for i in range(5, min(10, len(rects))):
-                if player.rect.colliderect(rects[i]):
-                    return True
     elif isinstance(obj, JumppadOrbsObstacle):
         if obj.check_collision(player, [False] * 323):
             return True
@@ -333,7 +315,7 @@ def ai_reinforcement_play():
     
     batch_size = 64
     scores = []
-    episodes = 300
+    episodes = 900
     
     min_obstacle_distances = {
         6: 150, 7: 175, 8: 500, 9: 250, 10: 275, 11: 300
@@ -452,18 +434,14 @@ def ai_reinforcement_play():
                         obj = Obstacle(WIDTH)
                     elif choice < 0.5:
                         obj = JumpPad(WIDTH)
-                    elif choice < 0.65:
-                        obj = Block(WIDTH)
                     else:
-                        obj = PurpleOrb(WIDTH)
+                        obj = Block(WIDTH)
                 else:
                     choice = random.random()
                     if choice < 0.3:
                         obj = DoublePikes(WIDTH)
                     elif choice < 0.5:
                         obj = BlockGapBlockWithSpike(WIDTH)
-                    elif choice < 0.7:
-                        obj = PurpleOrb(WIDTH)
                     else:
                         obj = JumppadOrbsObstacle(WIDTH)
                 
@@ -495,23 +473,6 @@ def ai_reinforcement_play():
                             player.rect.left < pad_rect.right):
                             if hasattr(obj, 'activate') and callable(getattr(obj, 'activate')):
                                 obj.activate(player)
-                
-                # Gestion spécifique pour QuintuplePikesWithJumpPad
-                elif isinstance(obj, QuintuplePikesWithJumpPad):
-                    if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
-                        rects = obj.get_rects()
-                        if len(rects) > 0:
-                            jumppad_rect = rects[-1]
-                            if player.rect.colliderect(jumppad_rect):
-                                if hasattr(obj, 'activate_jump_pad') and callable(getattr(obj, 'activate_jump_pad')):
-                                    obj.activate_jump_pad(player)
-                        
-                        for i in range(5, min(10, len(rects))):
-                            if player.rect.colliderect(rects[i]):
-                                player.is_alive = False
-                                print("Game Over! Collision avec un pic quintuple")
-                                running = False
-                                break
                 
                 else:
                     if check_collision(obj, player):
@@ -765,18 +726,14 @@ def best_ai_play():
                     obj = Obstacle(WIDTH)
                 elif choice < 0.5:
                     obj = JumpPad(WIDTH)
-                elif choice < 0.65:
-                    obj = Block(WIDTH)
                 else:
-                    obj = PurpleOrb(WIDTH)
+                    obj = Block(WIDTH)
             else:
                 choice = random.random()
                 if choice < 0.3:
                     obj = DoublePikes(WIDTH)
                 elif choice < 0.5:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.7:
-                    obj = PurpleOrb(WIDTH)
                 else:
                     obj = JumppadOrbsObstacle(WIDTH)
             
