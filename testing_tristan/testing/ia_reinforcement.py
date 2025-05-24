@@ -15,9 +15,7 @@ from klass import Block
 from klass import BlockGapBlockWithSpike
 from klass import BouncingObstacle
 from klass import DoubleBlockPillar
-from klass import FivePikesWithOrb
 from klass import JumpPad
-from klass import JumppadOrbsObstacle
 
 class GeometryDashAI:
     def __init__(self, state_size=8, action_size=2, load_model=True):
@@ -218,16 +216,6 @@ def get_obstacle_data(obj):
         obj_width = obj.width
         obj_height = 50
         obstacle_type = 9
-    elif isinstance(obj, FivePikesWithOrb):
-        obj_x = obj.x
-        obj_width = obj.width
-        obj_height = 150
-        obstacle_type = 11
-    elif isinstance(obj, JumppadOrbsObstacle):
-        obj_x = obj.x
-        obj_width = obj.width
-        obj_height = 150
-        obstacle_type = 13
     
     return obj_x, obj_width, obj_height, obstacle_type
 
@@ -270,13 +258,6 @@ def check_collision(obj, player):
         for rect in obj.get_rects():
             if player.rect.colliderect(rect):
                 return True
-    elif isinstance(obj, FivePikesWithOrb):
-        for i, rect in enumerate(obj.get_rects()):
-            if i < 5 and player.rect.colliderect(rect):
-                return True
-    elif isinstance(obj, JumppadOrbsObstacle):
-        if obj.check_collision(player, [False] * 323):
-            return True
     
     return False
 
@@ -315,7 +296,7 @@ def ai_reinforcement_play():
     
     batch_size = 64
     scores = []
-    episodes = 900
+    episodes = 100000
     
     min_obstacle_distances = {
         6: 150, 7: 175, 8: 500, 9: 250, 10: 275, 11: 300
@@ -440,10 +421,8 @@ def ai_reinforcement_play():
                     choice = random.random()
                     if choice < 0.3:
                         obj = DoublePikes(WIDTH)
-                    elif choice < 0.5:
-                        obj = BlockGapBlockWithSpike(WIDTH)
                     else:
-                        obj = JumppadOrbsObstacle(WIDTH)
+                        obj = BlockGapBlockWithSpike(WIDTH)
                 
                 if obj:
                     obj.set_speed(current_speed)
@@ -732,10 +711,8 @@ def best_ai_play():
                 choice = random.random()
                 if choice < 0.3:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.5:
-                    obj = BlockGapBlockWithSpike(WIDTH)
                 else:
-                    obj = JumppadOrbsObstacle(WIDTH)
+                    obj = BlockGapBlockWithSpike(WIDTH)
             
             if obj:
                 obj.set_speed(current_speed)
