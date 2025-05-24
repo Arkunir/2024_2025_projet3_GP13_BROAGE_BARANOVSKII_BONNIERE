@@ -4,7 +4,10 @@ import random
 import pickle
 import os
 from collections import deque
-
+import matplotlib.pyplot as plt
+import matplotlib.backends.backend_agg as agg
+import threading
+import time
 from klass import Player
 from klass import MovingObject
 from klass import Obstacle
@@ -108,7 +111,7 @@ class GeometryDashAI:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
     
-    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False, obstacle_type=0):
+    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False, obstacle_type=0, next_obstacle_type=0):
         if not player_alive:
             return -1000  # Grosse récompense négative pour la mort
 
@@ -125,11 +128,12 @@ class GeometryDashAI:
         if jumppad_touched:
             reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
 
-        # Pénalité pour les sauts inutiles
-        if is_jumping and distance_to_obstacle > 170:
-            reward -= 10
+        # Pénalité/récompense pour les sauts inutiles/appropriés - sauf si le prochain obstacle est BlockGapBlockWithSpike
+        if next_obstacle_type != 6 or 7:  # 8 est le type pour BlockGapBlockWithSpike
+            if is_jumping and distance_to_obstacle > 170:
+                reward -= 10
         else:
-            reward += 10  # Pénalité pour les sauts inutiles
+            reward += 10  # Récompense pour ne pas sauter inutilement
 
         # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
@@ -293,7 +297,7 @@ def is_offscreen(obj):
 
 def ai_reinforcement_play():
     print("Mode IA par renforcement activé")
-    
+
     WIDTH, HEIGHT = 800, 600
     FPS = 60
     GRAVITY = 1

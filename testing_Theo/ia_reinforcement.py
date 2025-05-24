@@ -140,36 +140,34 @@ class GeometryDashAI:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
     
-    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0):
-        """
-        Calcule une récompense plus sophistiquée basée sur plusieurs facteurs
-        """
+    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False, obstacle_type=0, next_obstacle_type=0):
         if not player_alive:
-            return -100  # Pénalité sévère pour la mort
-        
+            return -1000  # Grosse récompense négative pour la mort
+
         reward = 0
-        
-        # Récompense pour survivre
-        reward += 0.1
-        
-        # Récompense pour passer un obstacle
-        if obstacle_passed:
-            reward += 10
-        
-        # Récompense progressive basée sur la distance à l'obstacle
-        if distance_to_obstacle < 200:
-            # Plus l'obstacle est proche, plus la récompense pour être en vie est grande
-            reward += (1 - distance_to_obstacle / 200) * 2
-        
-        # Récompense pour être à une bonne hauteur par rapport aux obstacles
-        # Si l'obstacle est haut et que le joueur est haut aussi, c'est bien
+
+        # Petite récompense pour le défilement automatique (survie)
+        reward += 0.05
+
+        # Grosse récompense pour les obstacles franchis (sauf JumpPad)
+        if obstacle_passed and obstacle_type != 9:  # 9 est le type pour JumpPad
+            reward += 15
+
+        # Récompense importante pour avoir touché un jumppad
+        if jumppad_touched:
+            reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
+
+        # Pénalité/récompense pour les sauts inutiles/appropriés - sauf si le prochain obstacle est BlockGapBlockWithSpike
+        if next_obstacle_type != 8:  # 8 est le type pour BlockGapBlockWithSpike
+            if is_jumping and distance_to_obstacle > 170:
+                reward -= 10
+            else:
+                reward += 10  # Récompense pour ne pas sauter inutilement
+
+        # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
             reward += 1
-        
-        # Pénalité pour sauter sans raison (obstacle loin)
-        if distance_to_obstacle > 300 and player_y < ground_height - 20:
-            reward -= 0.5
-        
+
         return reward
     
     def save_model(self):
