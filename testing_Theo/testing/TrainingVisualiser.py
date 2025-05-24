@@ -218,20 +218,20 @@ class TrainingVisualizer:
             
             
 # Au début de la fonction
-    visualizer = TrainingVisualizer()
-    visualizer.start()
+        visualizer = TrainingVisualizer()
+        visualizer.start()
 
     # Dans la boucle d'entraînement, après chaque épisode
-    visualizer.update_data(
-        episode=current_episode,
-        score=score,
-        reward=total_reward,
-        epsilon=agent.epsilon,
-        avg_score=avg_score,
-        survival_time=episode_duration,
-        best_score=agent.high_score,
-        total_states=len(agent.q_table)
-    )
+        visualizer.update_data(
+            episode=current_episode,
+            score=score,
+            reward=total_reward,
+            epsilon=agent.epsilon,
+            avg_score=avg_score,
+            survival_time=episode_duration,
+            best_score=agent.high_score,
+            total_states=len(agent.q_table)
+            )
 
     # A la fin
-    visualizer.stop()
+        visualizer.stop()
