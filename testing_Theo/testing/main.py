@@ -2,6 +2,8 @@ import pygame
 import sys
 import random
 import os
+import pickle
+import matplotlib.pyplot as plt
 from klass import Button
 from klass import Player
 from klass import MovingObject
@@ -425,7 +427,73 @@ def main():
         clock.tick(FPS)
     
     show_menu()
+def show_training_graph():
+    """Affiche un graphique de l'évolution du score moyen à partir du fichier de modèle."""
+    model_path = 'geometry_dash_ai_modelv3.pkl'
     
+    if not os.path.exists(model_path):
+        print(f"Le fichier {model_path} n'existe pas.")
+        return
+    
+    try:
+        with open(model_path, 'rb') as f:
+            data = pickle.load(f)
+            
+        if isinstance(data, dict) and 'training_scores' in data:
+            scores = data['training_scores']
+        else:
+            print("Aucune donnée de scores d'entraînement trouvée dans le fichier.")
+            return
+            
+        if not scores:
+            print("Aucun score d'entraînement disponible.")
+            return
+            
+        # Calculer les moyennes mobiles pour lisser la courbe
+        window_size = min(10, len(scores))
+        moving_averages = []
+        
+        for i in range(len(scores)):
+            start_idx = max(0, i - window_size + 1)
+            window_scores = scores[start_idx:i+1]
+            moving_averages.append(sum(window_scores) / len(window_scores))
+        
+        plt.figure(figsize=(12, 8))
+        
+        # Graphique des scores bruts
+        plt.subplot(2, 1, 1)
+        plt.plot(scores, alpha=0.3, color='lightblue', label='Scores bruts')
+        plt.plot(moving_averages, color='blue', linewidth=2, label=f'Moyenne mobile ({window_size} épisodes)')
+        plt.title('Évolution des scores d\'entraînement')
+        plt.xlabel('Épisode')
+        plt.ylabel('Score')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Graphique des statistiques
+        plt.subplot(2, 1, 2)
+        episodes_100 = [i for i in range(99, len(scores), 100)]
+        avg_per_100 = [sum(scores[max(0, i-99):i+1]) / min(100, i+1) for i in episodes_100]
+        
+        plt.plot(episodes_100, avg_per_100, 'ro-', linewidth=2, markersize=4)
+        plt.title('Score moyen par tranche de 100 épisodes')
+        plt.xlabel('Épisode')
+        plt.ylabel('Score moyen')
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.show()
+        
+        # Afficher quelques statistiques
+        print(f"\n=== Statistiques d'entraînement ===")
+        print(f"Nombre total d'épisodes: {len(scores)}")
+        print(f"Score maximum: {max(scores)}")
+        print(f"Score moyen global: {sum(scores)/len(scores):.2f}")
+        print(f"Score moyen des 100 derniers épisodes: {sum(scores[-100:])/min(100, len(scores)):.2f}")
+        
+    except Exception as e:
+        print(f"Erreur lors du chargement du graphique: {e}")
+
 def show_menu():
     button_color = (200, 200, 200)
     hover_color = (150, 150, 150)
@@ -433,9 +501,10 @@ def show_menu():
     button_width, button_height = 200, 50
     start_x = WIDTH // 2 - button_width // 2
     
-    player_button = Button("Joueur", start_x, 200, button_width, button_height, button_color, hover_color)
-    reinforcement_ai_button = Button("IA par Renforcement", start_x, 280, button_width, button_height, button_color, hover_color)
-    best_ai_button = Button("Meilleure IA", start_x, 360, button_width, button_height, button_color, hover_color)
+    player_button = Button("Joueur", start_x, 180, button_width, button_height, button_color, hover_color)
+    reinforcement_ai_button = Button("IA par Renforcement", start_x, 240, button_width, button_height, button_color, hover_color)
+    best_ai_button = Button("Meilleure IA", start_x, 300, button_width, button_height, button_color, hover_color)
+    graph_button = Button("Voir Graphique", start_x, 360, button_width, button_height, button_color, hover_color)
     
     menu_running = True
     while menu_running:
@@ -460,10 +529,12 @@ def show_menu():
         player_button.update(mouse_pos)
         reinforcement_ai_button.update(mouse_pos)
         best_ai_button.update(mouse_pos)
+        graph_button.update(mouse_pos)
         
         player_button.draw(screen)
         reinforcement_ai_button.draw(screen)
         best_ai_button.draw(screen)
+        graph_button.draw(screen)
         
         if player_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
@@ -476,9 +547,10 @@ def show_menu():
             menu_running = False
             best_ai_play()
             show_menu()
+        elif graph_button.check_clicked(mouse_pos, mouse_clicked):
+            show_training_graph()
         
         pygame.display.flip()
         clock.tick(30)
-
 if __name__ == "__main__":
     show_menu()

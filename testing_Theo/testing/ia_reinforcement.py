@@ -111,14 +111,14 @@ class GeometryDashAI:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
     
-    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False, obstacle_type=0, next_obstacle_type=0):
+    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False, obstacle_type=0, next_obstacle_type=0, contact_with_block=False):
         if not player_alive:
-            return -1000  # Grosse récompense négative pour la mort
+            return -10000  # Grosse récompense négative pour la mort
 
         reward = 0
 
         # Petite récompense pour le défilement automatique (survie)
-        reward += 0.05
+        reward += 0.01
 
         # Grosse récompense pour les obstacles franchis (sauf JumpPad)
         if obstacle_passed and obstacle_type != 9:  # 9 est le type pour JumpPad
@@ -126,18 +126,22 @@ class GeometryDashAI:
 
         # Récompense importante pour avoir touché un jumppad
         if jumppad_touched:
-            reward += 40  # Récompense significative pour encourager l'utilisation des JumpPad
+            reward += 30  # Récompense significative pour encourager l'utilisation des JumpPad
 
         # Pénalité/récompense pour les sauts inutiles/appropriés - sauf si le prochain obstacle est BlockGapBlockWithSpike
-        if next_obstacle_type != 6 or 7:  # 8 est le type pour BlockGapBlockWithSpike
+        if next_obstacle_type != 6 or 7:  # 7 est le type pour BlockGapBlockWithSpike
             if is_jumping and distance_to_obstacle > 170:
-                reward -= 10
-        else:
-            reward += 10  # Récompense pour ne pas sauter inutilement
+                reward -= 1
+            else:
+                reward += 1  # Récompense pour ne pas sauter inutilement
 
         # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
-            reward += 1
+            reward += 0.5
+
+        # Récompense de 250 si le cube est détecté à 4 blocs de hauteur (275 pixels)
+        if player_y <= ground_height - 275:
+            reward += 30
 
         return reward
     
@@ -336,9 +340,6 @@ def ai_reinforcement_play():
     avg_score = 0
     
     training_info_font = pygame.font.SysFont(None, 24)
-    
-    early_stopping_counter = 0
-    early_stopping_threshold = 500
     
     for e in range(episodes):
         print(f"Début de l'épisode {current_episode}/{agent.training_episodes + episodes}")
@@ -602,10 +603,6 @@ def ai_reinforcement_play():
             max_score = score
             agent.high_score = max_score
             print(f"Nouveau meilleur score! {max_score}")
-            
-            early_stopping_counter = 0
-        else:
-            early_stopping_counter += 1
         
         avg_score = sum(agent.last_scores) / len(agent.last_scores)
         
@@ -615,10 +612,6 @@ def ai_reinforcement_play():
         if current_episode % 10 == 0:
             agent.save_model()
             print(f"Modèle sauvegardé à l'épisode {current_episode}")
-        
-        if early_stopping_counter >= early_stopping_threshold:
-            print(f"Pas d'amélioration depuis {early_stopping_threshold} épisodes. Arrêt de l'entraînement.")
-            break
             
         current_episode += 1
         agent.training_episodes += 1
