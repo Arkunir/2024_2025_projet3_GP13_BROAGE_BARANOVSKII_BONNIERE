@@ -165,7 +165,6 @@ class GeometryDashAI:
             print(f"Erreur lors du chargement du modèle: {e}")
             print("Création d'un nouveau modèle.")
 
-
 def get_obstacle_data(obj):
     obj_x = 0
     obj_width = 0
