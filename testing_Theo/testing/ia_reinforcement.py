@@ -4,10 +4,7 @@ import random
 import pickle
 import os
 from collections import deque
-import matplotlib.pyplot as plt
-import matplotlib.backends.backend_agg as agg
-import threading
-import time
+
 from klass import Player
 from klass import MovingObject
 from klass import Obstacle
@@ -21,6 +18,8 @@ from klass import DoubleBlockPillar
 from klass import FivePikesWithOrb
 from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
+from klass import PurpleOrb
+from klass import JumppadOrbsObstacle
 
 class GeometryDashAI:
     def __init__(self, state_size=8, action_size=2, load_model=True):
@@ -29,8 +28,8 @@ class GeometryDashAI:
         
         self.gamma = 0.99
         self.epsilon = 1.0
-        self.epsilon_min = 0.002
-        self.epsilon_decay = 0.9997
+        self.epsilon_min = 0.05
+        self.epsilon_decay = 0.9995
         self.learning_rate = 0.01
         
         self.memory = deque(maxlen=10000)
@@ -41,7 +40,7 @@ class GeometryDashAI:
         self.high_score = 0
         self.last_scores = deque(maxlen=100)
         
-        self.model_path = 'geometry_dash_ai_modelv3.pkl'
+        self.model_path = 'geometry_dash_ai_model2.pkl'
         if load_model and os.path.exists(self.model_path):
             self.load_model()
     
@@ -111,38 +110,26 @@ class GeometryDashAI:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
     
-    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0, is_jumping=False, nearest_obstacle_distance=float('inf'), jumppad_touched=False, obstacle_type=0, next_obstacle_type=0, contact_with_block=False):
+    def calculate_reward(self, player_alive, distance_to_obstacle, obstacle_passed, player_y, ground_height, obstacle_height=0):
         if not player_alive:
-            return -10000  # Grosse récompense négative pour la mort
-
+            return -100
+        
         reward = 0
-
-        # Petite récompense pour le défilement automatique (survie)
-        reward += 0.01
-
-        # Grosse récompense pour les obstacles franchis (sauf JumpPad)
-        if obstacle_passed and obstacle_type != 9:  # 9 est le type pour JumpPad
-            reward += 15
-
-        # Récompense importante pour avoir touché un jumppad
-        if jumppad_touched:
-            reward += 30  # Récompense significative pour encourager l'utilisation des JumpPad
-
-        # Pénalité/récompense pour les sauts inutiles/appropriés - sauf si le prochain obstacle est BlockGapBlockWithSpike
-        if next_obstacle_type != 6 or 7:  # 7 est le type pour BlockGapBlockWithSpike
-            if is_jumping and distance_to_obstacle > 170:
-                reward -= 1
-            else:
-                reward += 1  # Récompense pour ne pas sauter inutilement
-
-        # Récompense pour avoir la bonne hauteur face à un obstacle élevé
+        
+        reward += 0.1
+        
+        if obstacle_passed:
+            reward += 10
+        
+        if distance_to_obstacle < 200:
+            reward += (1 - distance_to_obstacle / 200) * 2
+        
         if obstacle_height > 100 and player_y < ground_height - 100:
-            reward += 0.5
-
-        # Récompense de 250 si le cube est détecté à 4 blocs de hauteur (275 pixels)
-        if player_y <= ground_height - 275:
-            reward += 30
-
+            reward += 1
+        
+        if distance_to_obstacle > 300 and player_y < ground_height - 20:
+            reward -= 0.5
+        
         return reward
     
     def save_model(self):
@@ -234,6 +221,16 @@ def get_obstacle_data(obj):
         obj_width = obj.width
         obj_height = 150
         obstacle_type = 11
+    elif isinstance(obj, PurpleOrb):
+        obj_x = obj.x
+        obj_width = obj.width
+        obj_height = 50
+        obstacle_type = 12
+    elif isinstance(obj, JumppadOrbsObstacle):
+        obj_x = obj.x
+        obj_width = obj.width
+        obj_height = 150
+        obstacle_type = 13
     
     return obj_x, obj_width, obj_height, obstacle_type
 
@@ -264,7 +261,27 @@ def find_obstacles(game_objects, player_x):
 
 
 def check_collision(obj, player):
-    if isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
+    # Vérifier d'abord les jumppads pour appliquer l'effet de saut
+    if isinstance(obj, JumpPad):
+        if player.rect.colliderect(obj.get_rect()):
+            # Appliquer l'effet de saut
+            player.velocity_y = -25  # Force de saut plus forte que le saut normal
+            return "jumppad"  # Retourner un indicateur spécial
+    
+    elif isinstance(obj, QuintuplePikesWithJumpPad):
+        if hasattr(obj, 'get_rects'):
+            rects = obj.get_rects()
+            # Vérifier collision avec le jumppad (généralement le premier rect)
+            if len(rects) > 0 and player.rect.colliderect(rects[0]):
+                player.velocity_y = -25
+                return "jumppad"
+            # Vérifier collision avec les pikes (rects 5 à 9)
+            for i in range(5, min(10, len(rects))):
+                if player.rect.colliderect(rects[i]):
+                    return True
+    
+    # Vérifier les autres collisions mortelles
+    elif isinstance(obj, Obstacle) and player.rect.colliderect(obj.get_rect()):
         return True
     elif isinstance(obj, Block) and player.rect.colliderect(obj.rect):
         return True
@@ -280,12 +297,9 @@ def check_collision(obj, player):
         for i, rect in enumerate(obj.get_rects()):
             if i < 5 and player.rect.colliderect(rect):
                 return True
-    elif isinstance(obj, QuintuplePikesWithJumpPad):
-        if hasattr(obj, 'get_rects'):
-            rects = obj.get_rects()
-            for i in range(5, min(10, len(rects))):
-                if player.rect.colliderect(rects[i]):
-                    return True
+    elif isinstance(obj, JumppadOrbsObstacle):
+        if obj.check_collision(player, [False] * 323):
+            return True
     
     return False
 
@@ -301,7 +315,7 @@ def is_offscreen(obj):
 
 def ai_reinforcement_play():
     print("Mode IA par renforcement activé")
-
+    
     WIDTH, HEIGHT = 800, 600
     FPS = 60
     GRAVITY = 1
@@ -340,6 +354,9 @@ def ai_reinforcement_play():
     avg_score = 0
     
     training_info_font = pygame.font.SysFont(None, 24)
+    
+    early_stopping_counter = 0
+    early_stopping_threshold = 500
     
     for e in range(episodes):
         print(f"Début de l'épisode {current_episode}/{agent.training_episodes + episodes}")
@@ -442,16 +459,18 @@ def ai_reinforcement_play():
                         obj = JumpPad(WIDTH)
                     elif choice < 0.65:
                         obj = Block(WIDTH)
-                    # else:
-                    #     obj = PurpleOrb(WIDTH)
+                    else:
+                        obj = PurpleOrb(WIDTH)
                 else:
                     choice = random.random()
                     if choice < 0.3:
                         obj = DoublePikes(WIDTH)
                     elif choice < 0.5:
                         obj = BlockGapBlockWithSpike(WIDTH)
+                    elif choice < 0.7:
+                        obj = PurpleOrb(WIDTH)
                     else:
-                        obj = Obstacle(WIDTH)
+                        obj = JumppadOrbsObstacle(WIDTH)
                 
                 if obj:
                     obj.set_speed(current_speed)
@@ -472,38 +491,16 @@ def ai_reinforcement_play():
             for obj in game_objects[:]:
                 obj.update()
                 
-                # Gestion spécifique pour le JumpPad
-                if isinstance(obj, JumpPad):
-                    if hasattr(obj, 'get_rect') and callable(getattr(obj, 'get_rect')):
-                        pad_rect = obj.get_rect()
-                        if (player.rect.bottom >= pad_rect.top and 
-                            player.rect.right > pad_rect.left and 
-                            player.rect.left < pad_rect.right):
-                            if hasattr(obj, 'activate') and callable(getattr(obj, 'activate')):
-                                obj.activate(player)
+                collision_result = check_collision(obj, player)
                 
-                # Gestion spécifique pour QuintuplePikesWithJumpPad
-                elif isinstance(obj, QuintuplePikesWithJumpPad):
-                    if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
-                        rects = obj.get_rects()
-                        if len(rects) > 0:
-                            jumppad_rect = rects[-1]
-                            if player.rect.colliderect(jumppad_rect):
-                                if hasattr(obj, 'activate_jump_pad') and callable(getattr(obj, 'activate_jump_pad')):
-                                    obj.activate_jump_pad(player)
-                        
-                        for i in range(5, min(10, len(rects))):
-                            if player.rect.colliderect(rects[i]):
-                                player.is_alive = False
-                                print("Game Over! Collision avec un pic quintuple")
-                                running = False
-                                break
-                
-                else:
-                    if check_collision(obj, player):
-                        player.is_alive = False
-                        running = False
-                        break
+                if collision_result == "jumppad":
+                    # Le jumppad a été utilisé, on peut continuer
+                    pass
+                elif collision_result == True:
+                    # Collision mortelle
+                    player.is_alive = False
+                    running = False
+                    break
                 
                 if is_offscreen(obj):
                     objects_to_remove.append(obj)
@@ -538,9 +535,7 @@ def ai_reinforcement_play():
                 obstacle_passed,
                 player.y,
                 GROUND_HEIGHT,
-                obstacle_height,
-                player.is_jumping,  # Ajout du paramètre indiquant si le joueur est en train de sauter
-                current_distance    # Utiliser current_distance comme nearest_obstacle_distance
+                obstacle_height
             )
             
             is_done = not player.is_alive or not running
@@ -603,6 +598,10 @@ def ai_reinforcement_play():
             max_score = score
             agent.high_score = max_score
             print(f"Nouveau meilleur score! {max_score}")
+            
+            early_stopping_counter = 0
+        else:
+            early_stopping_counter += 1
         
         avg_score = sum(agent.last_scores) / len(agent.last_scores)
         
@@ -612,6 +611,10 @@ def ai_reinforcement_play():
         if current_episode % 10 == 0:
             agent.save_model()
             print(f"Modèle sauvegardé à l'épisode {current_episode}")
+        
+        if early_stopping_counter >= early_stopping_threshold:
+            print(f"Pas d'amélioration depuis {early_stopping_threshold} épisodes. Arrêt de l'entraînement.")
+            break
             
         current_episode += 1
         agent.training_episodes += 1
@@ -737,54 +740,26 @@ def best_ai_play():
         if can_spawn_obstacle and current_time - last_object > object_interval:
             obj = None
             
-            if current_speed == 6:
+            if current_speed <= 6:
                 choice = random.random()
                 if choice < 0.35:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.6:
+                elif choice < 0.5:
                     obj = JumpPad(WIDTH)
-                else:
+                elif choice < 0.65:
                     obj = Block(WIDTH)
-            elif current_speed == 7:
-                choice = random.random()
-                if choice < 0.2:
-                    obj = Obstacle(WIDTH)
-                elif choice < 0.4:
-                    obj = JumpPad(WIDTH)
-                elif choice < 0.6:
-                    obj = QuintuplePikesWithJumpPad(WIDTH)
-                elif choice < 0.8:
-                    obj = DoublePikes(WIDTH)
                 else:
-                    obj = Block(WIDTH)
-            elif current_speed == 8:
+                    obj = PurpleOrb(WIDTH)
+            else:
                 choice = random.random()
-                if choice < 0.2:
-                    obj = Obstacle(WIDTH)
-                elif choice < 0.4:
-                    obj = DoublePikes(WIDTH)
-                elif choice < 0.55:
-                    obj = DoubleBlockPillar(WIDTH)
-                elif choice < 0.8:
-                    obj = BlockGapBlockWithSpike(WIDTH)
-                else:
-                    obj = BouncingObstacle(WIDTH)
-            elif current_speed >= 9:
-                choice = random.random()
-                if choice < 0.1:
-                    obj = Obstacle(WIDTH)
-                elif choice < 0.2:
-                    obj = Block(WIDTH)
-                elif choice < 0.35:
+                if choice < 0.3:
                     obj = DoublePikes(WIDTH)
                 elif choice < 0.5:
                     obj = BlockGapBlockWithSpike(WIDTH)
-                elif choice < 0.65:
-                    obj = TriplePikes(WIDTH)
-                elif choice < 0.8:
-                    obj = DoubleBlockPillar(WIDTH)
+                elif choice < 0.7:
+                    obj = PurpleOrb(WIDTH)
                 else:
-                    obj = QuadruplePikes(WIDTH)
+                    obj = JumppadOrbsObstacle(WIDTH)
             
             if obj:
                 obj.set_speed(current_speed)

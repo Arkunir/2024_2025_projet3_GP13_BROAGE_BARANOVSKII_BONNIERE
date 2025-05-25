@@ -904,8 +904,8 @@ class QuintuplePikesWithJumpPad(MovingObject):
                 (self.x + (i+0.5) * CUBE_SIZE, spike_y + CUBE_SIZE)  # Point en bas (pointe)
             ])
         
-        # Dessiner le jumppad sous le 3ème pic
-        pad_x = self.x + CUBE_SIZE * 2  # Position du 3ème pic
+        # Dessiner le jumppad sous le 2ème pic
+        pad_x = self.x + CUBE_SIZE * 1  # Position du 2ème pic (index 1)
         pad_y = GROUND_HEIGHT - CUBE_SIZE // 3  # Hauteur du jumppad
         pad_width = CUBE_SIZE
         pad_height = CUBE_SIZE // 3
@@ -964,9 +964,9 @@ class QuintuplePikesWithJumpPad(MovingObject):
                 reduced_size * 0.7
             ))
         
-        # Hitbox pour le jumppad
+        # Hitbox pour le jumppad (maintenant sous le 2ème pic)
         hitboxes.append(pygame.Rect(
-            self.x + CUBE_SIZE * 2,
+            self.x + CUBE_SIZE * 1,  # Position du 2ème pic (index 1)
             GROUND_HEIGHT - CUBE_SIZE // 3,
             CUBE_SIZE,
             CUBE_SIZE // 3
@@ -1000,22 +1000,6 @@ class QuintuplePikesWithJumpPad(MovingObject):
             player.is_jumping = True
             return True
         return False
-        
-    def check_collision(self, player):
-        rects = self.get_rects()
-        
-        # Vérifier la collision avec le jumppad (dernier rectangle)
-        jump_pad_rect = rects[-1]
-        if player.rect.colliderect(jump_pad_rect):
-            self.activate_jump_pad(player)
-            return False  # Pas une collision mortelle
-        
-        # Vérifier les collisions avec les pics (mortelles)
-        for i in range(5):  # Les 5 premiers rectangles sont les pics
-            if player.rect.colliderect(rects[i]):
-                return True  # Collision mortelle
-                
-        return False  # Pas de collision
 
 class JumppadOrbsObstacle(MovingObject):
     def __init__(self, x):

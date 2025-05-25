@@ -216,7 +216,6 @@ class TrainingVisualizer:
             pygame.display.flip()
             clock.tick(30)  # 30 FPS pour la visualisation
             
-            
 # Au début de la fonction
         visualizer = TrainingVisualizer()
         visualizer.start()

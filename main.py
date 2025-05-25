@@ -2,8 +2,7 @@ import pygame
 import sys
 import random
 import os
-# Suppression de l'import problématique - à remplacer par votre propre code d'IA
-# from testiacode import ai_test_play
+import pickle
 from klass import Button
 from klass import Player
 from klass import MovingObject
@@ -36,13 +35,230 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
-GREEN = (0, 255, 0) 
+GREEN = (0, 255, 0)
+LIGHT_GRAY = (220, 220, 220)
+DARK_GRAY = (100, 100, 100)
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash Clone")
 clock = pygame.time.Clock()
 
-# Suppression des fonctions temporaires pour utiliser celles importées du module ia_reinforcement
+def load_training_data():
+    """Charge les données d'entraînement depuis le fichier pkl."""
+    model_path = 'geometry_dash_ai_modelv5.pkl'
+    
+    if not os.path.exists(model_path):
+        print(f"Le fichier {model_path} n'existe pas.")
+        return None
+    
+    try:
+        with open(model_path, 'rb') as f:
+            data = pickle.load(f)
+            
+        # Gestion de différents formats de données possibles
+        if isinstance(data, dict):
+            # Si c'est un dictionnaire, chercher les scores
+            if 'training_scores' in data:
+                return data['training_scores']
+            elif 'scores' in data:
+                return data['scores']
+            elif 'episode_scores' in data:
+                return data['episode_scores']
+            else:
+                # Si aucune clé connue, essayer de prendre la première liste trouvée
+                for key, value in data.items():
+                    if isinstance(value, list) and value:
+                        return value
+        elif isinstance(data, list):
+            # Si c'est directement une liste
+            return data
+        elif hasattr(data, 'training_scores'):
+            # Si c'est un objet avec un attribut training_scores
+            return data.training_scores
+            
+        print("Format de données non reconnu dans le fichier pkl.")
+        print(f"Type de données: {type(data)}")
+        if isinstance(data, dict):
+            print(f"Clés disponibles: {list(data.keys())}")
+        return None
+        
+    except Exception as e:
+        print(f"Erreur lors du chargement du fichier: {e}")
+        return None
+
+def calculate_moving_average(scores, window_size=10):
+    """Calcule la moyenne mobile des scores."""
+    if not scores:
+        return []
+    
+    window_size = min(window_size, len(scores))
+    moving_averages = []
+    
+    for i in range(len(scores)):
+        start_idx = max(0, i - window_size + 1)
+        window_scores = scores[start_idx:i+1]
+        moving_averages.append(sum(window_scores) / len(window_scores))
+    
+    return moving_averages
+
+def draw_graph(surface, scores, x, y, width, height):
+    """Dessine un graphique des scores sur la surface Pygame."""
+    if not scores:
+        # Afficher un message si pas de données
+        font = pygame.font.SysFont(None, 24)
+        text = font.render("Aucune donnée disponible", True, BLACK)
+        text_rect = text.get_rect(center=(x + width//2, y + height//2))
+        surface.blit(text, text_rect)
+        return
+    
+    # Dessiner le cadre du graphique
+    pygame.draw.rect(surface, WHITE, (x, y, width, height))
+    pygame.draw.rect(surface, BLACK, (x, y, width, height), 2)
+    
+    # Calculer les valeurs min/max pour l'échelle
+    min_score = min(scores)
+    max_score = max(scores)
+    score_range = max_score - min_score if max_score != min_score else 1
+    
+    # Dessiner la grille
+    grid_color = LIGHT_GRAY
+    for i in range(1, 5):
+        # Lignes horizontales
+        grid_y = y + (height * i // 5)
+        pygame.draw.line(surface, grid_color, (x, grid_y), (x + width, grid_y))
+        
+        # Lignes verticales
+        grid_x = x + (width * i // 5)
+        pygame.draw.line(surface, grid_color, (grid_x, y), (grid_x, y + height))
+    
+    # Dessiner les scores bruts (en gris clair)
+    if len(scores) > 1:
+        points = []
+        for i, score in enumerate(scores):
+            px = x + (i * width // (len(scores) - 1))
+            py = y + height - int(((score - min_score) / score_range) * height)
+            points.append((px, py))
+        
+        if len(points) > 1:
+            pygame.draw.lines(surface, DARK_GRAY, False, points, 1)
+    
+    # Dessiner la moyenne mobile (en bleu)
+    moving_avg = calculate_moving_average(scores, min(10, len(scores)))
+    if len(moving_avg) > 1:
+        points = []
+        for i, avg in enumerate(moving_avg):
+            px = x + (i * width // (len(moving_avg) - 1))
+            py = y + height - int(((avg - min_score) / score_range) * height)
+            points.append((px, py))
+        
+        if len(points) > 1:
+            pygame.draw.lines(surface, BLUE, False, points, 3)
+    
+    # Dessiner les étiquettes
+    font_small = pygame.font.SysFont(None, 18)
+    font_medium = pygame.font.SysFont(None, 20)
+    
+    # Étiquettes des axes
+    max_text = font_small.render(f"{max_score:.0f}", True, BLACK)
+    surface.blit(max_text, (x - 35, y - 5))
+    
+    min_text = font_small.render(f"{min_score:.0f}", True, BLACK)
+    surface.blit(min_text, (x - 35, y + height - 10))
+    
+    mid_score = (max_score + min_score) / 2
+    mid_text = font_small.render(f"{mid_score:.0f}", True, BLACK)
+    surface.blit(mid_text, (x - 35, y + height//2 - 5))
+    
+    # Nombre d'épisodes
+    episodes_text = font_small.render(f"0", True, BLACK)
+    surface.blit(episodes_text, (x - 5, y + height + 5))
+    
+    episodes_end = font_small.render(f"{len(scores)}", True, BLACK)
+    surface.blit(episodes_end, (x + width - 20, y + height + 5))
+
+def show_training_graph():
+    """Affiche l'écran de graphique des données d'entraînement."""
+    scores = load_training_data()
+    
+    graph_running = True
+    while graph_running:
+        screen.fill(WHITE)
+        
+        # Titre
+        font_title = pygame.font.SysFont(None, 48)
+        title_text = font_title.render("Graphique d'Entraînement", True, BLACK)
+        title_rect = title_text.get_rect(center=(WIDTH // 2, 40))
+        screen.blit(title_text, title_rect)
+        
+        if scores:
+            # Dessiner le graphique principal
+            draw_graph(screen, scores, 80, 80, WIDTH - 160, 300)
+            
+            # Afficher les statistiques
+            font_stats = pygame.font.SysFont(None, 24)
+            stats_y = 400
+            
+            stats = [
+                f"Nombre d'épisodes: {len(scores)}",
+                f"Score maximum: {max(scores)}",
+                f"Score moyen: {sum(scores)/len(scores):.2f}",
+                f"Score moyen (100 derniers): {sum(scores[-100:])/min(100, len(scores)):.2f}"
+            ]
+            
+            for i, stat in enumerate(stats):
+                stat_text = font_stats.render(stat, True, BLACK)
+                screen.blit(stat_text, (80, stats_y + i * 25))
+            
+            # Légende
+            legend_y = 520
+            font_legend = pygame.font.SysFont(None, 20)
+            
+            # Ligne grise pour scores bruts
+            pygame.draw.line(screen, DARK_GRAY, (80, legend_y), (110, legend_y), 2)
+            legend_text1 = font_legend.render("Scores bruts", True, BLACK)
+            screen.blit(legend_text1, (120, legend_y - 8))
+            
+            # Ligne bleue pour moyenne mobile
+            pygame.draw.line(screen, BLUE, (250, legend_y), (280, legend_y), 3)
+            legend_text2 = font_legend.render("Moyenne mobile", True, BLACK)
+            screen.blit(legend_text2, (290, legend_y - 8))
+        else:
+            # Message d'erreur si pas de données
+            font_error = pygame.font.SysFont(None, 32)
+            error_text = font_error.render("Impossible de charger les données d'entraînement", True, RED)
+            error_rect = error_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(error_text, error_rect)
+            
+            font_help = pygame.font.SysFont(None, 24)
+            help_text = font_help.render("Vérifiez que le fichier 'geometry_dash_ai_modelv5.pkl' existe", True, BLACK)
+            help_rect = help_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 40))
+            screen.blit(help_text, help_rect)
+        
+        # Bouton retour
+        back_button = Button("Retour", WIDTH // 2 - 50, HEIGHT - 80, 100, 40, (200, 200, 200), (150, 150, 150))
+        
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_clicked = False
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    graph_running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    mouse_clicked = True
+        
+        back_button.update(mouse_pos)
+        back_button.draw(screen)
+        
+        if back_button.check_clicked(mouse_pos, mouse_clicked):
+            graph_running = False
+        
+        pygame.display.flip()
+        clock.tick(30)
 
 def main():
     player = Player()
@@ -50,14 +266,13 @@ def main():
     score = 0
     last_object = pygame.time.get_ticks()
     
-    # Distances minimales entre obstacles en fonction de la vitesse
     min_obstacle_distances = {
-        6: 150,  # Espacement minimal à vitesse 6
-        7: 175,  # Espacement minimal à vitesse 7
-        8: 500,  # Espacement minimal à vitesse 8
-        9: 250,  # Espacement minimal à vitesse 9
-        10: 275, # Espacement minimal à vitesse 10
-        11: 300  # Espacement minimal à vitesse 11
+        6: 150,
+        7: 175,
+        8: 500,
+        9: 250,
+        10: 275,
+        11: 300
     }
     
     obstacle_intervals = {
@@ -72,7 +287,7 @@ def main():
     object_interval = random.randint(*obstacle_intervals[INITIAL_SCROLL_SPEED])
     
     current_speed = INITIAL_SCROLL_SPEED
-    previous_speed = current_speed  # Pour détecter les changements de vitesse
+    previous_speed = current_speed
     
     space_pressed = False
     
@@ -110,15 +325,12 @@ def main():
                     player.jump()
                 space_pressed = True
 
-        # Vérifier s'il faut créer un nouvel obstacle
         can_spawn_obstacle = True
         min_distance = min_obstacle_distances[current_speed]
         
-        # Si des obstacles existent déjà, vérifier l'espacement
         if game_objects:
             last_obstacle = game_objects[-1]
             
-            # Calculer la position de fin du dernier obstacle
             if isinstance(last_obstacle, Obstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             elif isinstance(last_obstacle, Block):
@@ -138,17 +350,15 @@ def main():
             elif isinstance(last_obstacle, JumppadOrbsObstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
             
-            # Vérifier si l'espace est suffisant pour un nouvel obstacle
             if WIDTH - last_obstacle_right < min_distance:
                 can_spawn_obstacle = False
         
-        # Créer un nouvel obstacle si les conditions sont remplies
         if can_spawn_obstacle and current_time - last_object > object_interval:
-            obj = None  # Initialisation pour éviter des problèmes
+            obj = None
             
             if current_speed == 6:
                 choice = random.random()
-                if choice < 0.35:  # Réduire la probabilité pour faire place à notre nouvel obstacle
+                if choice < 0.35:
                     obj = Obstacle(WIDTH)
                 elif choice < 0.5:
                     obj = JumpPad(WIDTH)
@@ -187,7 +397,7 @@ def main():
                 elif choice < 0.85:
                     obj = PurpleOrb(WIDTH)
                 else:
-                    obj = JumppadOrbsObstacle(WIDTH)  # Ajout du nouvel obstacle avec 15% de chance
+                    obj = JumppadOrbsObstacle(WIDTH)
             elif current_speed == 9:
                 choice = random.random()
                 if choice < 0.05:
@@ -207,7 +417,7 @@ def main():
                 elif choice < 0.75:
                     obj = PurpleOrb(WIDTH)
                 else:
-                    obj = JumppadOrbsObstacle(WIDTH)  # Ajout du nouvel obstacle avec 25% de chance
+                    obj = JumppadOrbsObstacle(WIDTH)
             elif current_speed >= 10:
                 choice = random.random()
                 if choice < 0.3:
@@ -223,9 +433,8 @@ def main():
                 elif choice < 0.85:
                     obj = PurpleOrb(WIDTH)
                 else:
-                    obj = JumppadOrbsObstacle(WIDTH)  # Ajout du nouvel obstacle avec 15% de chance
+                    obj = JumppadOrbsObstacle(WIDTH)
                 
-            # Vérifier que obj a bien été défini avant de l'utiliser
             if obj:
                 obj.set_speed(current_speed)
                 game_objects.append(obj)
@@ -239,50 +448,38 @@ def main():
             print("Game Over! Score:", score)
             running = False
         
-        # Créer une copie de la liste pour éviter les problèmes de modification pendant l'itération
         objects_to_remove = []
         
-        # Mettre à jour les objets du jeu et vérifier les collisions
         for obj in game_objects[:]:
             obj.update()
             
-            # Gestion spécifique pour le JumppadOrbsObstacle
             if isinstance(obj, JumppadOrbsObstacle):
-                # Vérifier les collisions avec cet obstacle
                 if obj.check_collision(player, keys):
                     player.is_alive = False
                     print("Game Over! Collision avec un JumppadOrbsObstacle")
                     running = False
                     break
                 
-                # Si l'objet est hors de l'écran, le marquer pour suppression
                 if obj.x + obj.width < 0:
                     objects_to_remove.append(obj)
             
-            # Gestion spécifique pour le FivePikesWithOrb
             elif isinstance(obj, FivePikesWithOrb):
-                # Vérifier l'activation de l'orbe
                 obj.check_activation(player, keys)
                 
-                # Vérifier les collisions avec les pics
                 for i, rect in enumerate(obj.get_rects()):
-                    if i < 5:  # Les 5 premiers rectangles sont les pics
+                    if i < 5:
                         if player.rect.colliderect(rect):
                             player.is_alive = False
                             print("Game Over! Collision avec un pic du FivePikesWithOrb")
                             running = False
                             break
                 
-                # Si l'objet est hors de l'écran, le marquer pour suppression
                 if obj.x + obj.width < 0:
                     objects_to_remove.append(obj)
             
-            # Gestion spécifique pour l'orbe violette
             elif isinstance(obj, PurpleOrb):
-                # Vérifier l'activation de l'orbe
                 obj.check_activation(player, keys)
                 
-                # Si l'objet est hors de l'écran, le marquer pour suppression
                 if obj.x + obj.width < 0:
                     objects_to_remove.append(obj)
 
@@ -294,11 +491,10 @@ def main():
                 if not running:
                     break
                 
-                # Correction: vérifier si la méthode get_rects existe et traiter en conséquence
                 if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
                     rects = obj.get_rects()
-                    if len(rects) > 4:  # Vérifier qu'il y a suffisamment de rectangles
-                        for pad_rect in rects[4:]:  # Pad rects
+                    if len(rects) > 4:
+                        for pad_rect in rects[4:]:
                             if player.rect.colliderect(pad_rect) and hasattr(obj, 'activate_pads'):
                                 obj.activate_pads(player)
             
@@ -335,28 +531,24 @@ def main():
                         break
                     
             elif isinstance(obj, JumpPad):
-                # Vérifier si la méthode get_rect existe
                 if hasattr(obj, 'get_rect') and callable(getattr(obj, 'get_rect')):
                     pad_rect = obj.get_rect()
                     if (player.rect.bottom >= pad_rect.top and 
                         player.rect.right > pad_rect.left and 
                         player.rect.left < pad_rect.right):
-                        # Vérifier si la méthode activate existe
                         if hasattr(obj, 'activate') and callable(getattr(obj, 'activate')):
-                            obj.activate(player)  # Activer le pad et appliquer le boost
+                            obj.activate(player)
             
             elif isinstance(obj, QuintuplePikesWithJumpPad):
                 if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
                     rects = obj.get_rects()
-                    if len(rects) > 0:  # S'assurer qu'il y a des rectangles
-                        jumppad_rect = rects[-1]  # Le dernier rectangle est le jumppad
+                    if len(rects) > 0:
+                        jumppad_rect = rects[-1]
                         
-                        # Vérifier la collision avec le jumppad
                         if player.rect.colliderect(jumppad_rect):
                             if hasattr(obj, 'activate_jump_pad') and callable(getattr(obj, 'activate_jump_pad')):
                                 obj.activate_jump_pad(player)
                         
-                        # Vérifier les collisions avec les pics (indices 5 à 9 sont les pics après les 5 blocs)
                         for i in range(5, min(10, len(rects))):
                             if player.rect.colliderect(rects[i]):
                                 player.is_alive = False
@@ -364,7 +556,6 @@ def main():
                                 running = False
                                 break
                     
-            # Vérifier si l'objet est hors de l'écran pour le marquer pour suppression
             if ((isinstance(obj, Obstacle) and obj.x + obj.width < 0) or
                 (isinstance(obj, Block) and obj.rect.right < 0) or
                 (isinstance(obj, (DoublePikes, TriplePikes, QuadruplePikes)) and obj.x + obj.width < 0) or
@@ -375,14 +566,12 @@ def main():
                 (isinstance(obj, QuintuplePikesWithJumpPad) and obj.x + obj.width < 0)):
                 objects_to_remove.append(obj)
         
-        # Maintenant, supprimons tous les objets marqués et incrémentons le score
         for obj in objects_to_remove:
-            if obj in game_objects:  # Vérifier que l'objet est toujours dans la liste
+            if obj in game_objects:
                 game_objects.remove(obj)
                 score += 1
                 
-                # Gestion des changements de vitesse en fonction du score
-                old_speed = current_speed  # Sauvegarder l'ancienne vitesse
+                old_speed = current_speed
                 
                 if score < speed_threshold_random:
                     if score == speed_threshold_7 and current_speed < 7:
@@ -401,9 +590,8 @@ def main():
                         for game_obj in game_objects:
                             game_obj.set_speed(current_speed)
                 elif score == speed_threshold_random:
-                    # Modification: s'assurer que la nouvelle vitesse est différente de la vitesse actuelle
                     new_speed = random.randint(9, 11)
-                    if score >= 100:  # À partir du score 100, on s'assure que la vitesse change
+                    if score >= 100:
                         while new_speed == current_speed:
                             new_speed = random.randint(9, 11)
                     
@@ -414,9 +602,8 @@ def main():
                     next_random_change = score + random.randint(25, 50)
                     print(f"Prochain changement à {next_random_change} points")
                 elif score >= speed_threshold_random and score == next_random_change:
-                    # Modification: s'assurer que la nouvelle vitesse est différente de la vitesse actuelle
                     new_speed = random.randint(9, 11)
-                    if score >= 100:  # À partir du score 100, on s'assure que la vitesse change
+                    if score >= 100:
                         while new_speed == current_speed:
                             new_speed = random.randint(9, 11)
                     
@@ -427,7 +614,6 @@ def main():
                     next_random_change = score + random.randint(25, 50)
                     print(f"Prochain changement à {next_random_change} points")
                 
-                # Vérifier si la vitesse a changé
                 if current_speed != previous_speed:
                     print(f"Changement de vitesse détecté: {previous_speed} -> {current_speed}")
                     if hasattr(player, 'change_skin_randomly') and callable(getattr(player, 'change_skin_randomly')):
@@ -459,7 +645,7 @@ def main():
         clock.tick(FPS)
     
     show_menu()
-    
+
 def show_menu():
     button_color = (200, 200, 200)
     hover_color = (150, 150, 150)
@@ -467,10 +653,10 @@ def show_menu():
     button_width, button_height = 200, 50
     start_x = WIDTH // 2 - button_width // 2
     
-    # On ne garde que les trois boutons demandés
-    player_button = Button("Joueur", start_x, 200, button_width, button_height, button_color, hover_color)
-    reinforcement_ai_button = Button("IA par Renforcement", start_x, 280, button_width, button_height, button_color, hover_color)
-    best_ai_button = Button("Meilleure IA", start_x, 360, button_width, button_height, button_color, hover_color)
+    player_button = Button("Joueur", start_x, 180, button_width, button_height, button_color, hover_color)
+    reinforcement_ai_button = Button("IA par Renforcement", start_x, 240, button_width, button_height, button_color, hover_color)
+    best_ai_button = Button("Meilleure IA", start_x, 300, button_width, button_height, button_color, hover_color)
+    graph_button = Button("Voir Graphique", start_x, 360, button_width, button_height, button_color, hover_color)
     
     menu_running = True
     while menu_running:
@@ -495,28 +681,29 @@ def show_menu():
         player_button.update(mouse_pos)
         reinforcement_ai_button.update(mouse_pos)
         best_ai_button.update(mouse_pos)
+        graph_button.update(mouse_pos)
         
         player_button.draw(screen)
         reinforcement_ai_button.draw(screen)
         best_ai_button.draw(screen)
+        graph_button.draw(screen)
         
         if player_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
             main()
         elif reinforcement_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
-            # Utilisation de la fonction importée du module ia_reinforcement
             ai_reinforcement_play()
             show_menu()
         elif best_ai_button.check_clicked(mouse_pos, mouse_clicked):
             menu_running = False
-            # Utilisation de la fonction importée du module ia_reinforcement
             best_ai_play()
             show_menu()
+        elif graph_button.check_clicked(mouse_pos, mouse_clicked):
+            show_training_graph()
         
         pygame.display.flip()
         clock.tick(30)
 
-# Démarrer le menu principal si exécuté directement
 if __name__ == "__main__":
     show_menu()
