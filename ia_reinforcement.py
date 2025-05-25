@@ -309,8 +309,8 @@ def ai_reinforcement_play():
     }
     
     obstacle_intervals = {
-        6: [800, 1400], 7: [900, 1600], 8: [1200, 1800],
-        9: [1300, 2000], 10: [1400, 2100], 11: [1500, 2200]
+        6: [800, 1400], 7: [850, 1450], 8: [900, 1500],
+        9: [950, 1550], 10: [1000, 1600], 11: [1000, 1600]
     }
     
     max_score = agent.high_score
@@ -436,19 +436,25 @@ def ai_reinforcement_play():
                     choice = random.random()
                     if choice < 0.2:
                         obj = Obstacle(WIDTH)
-                    elif choice < 0.5:
+                    elif choice < 0.4:
                         obj = DoublePikes(WIDTH)
-                    elif choice < 0.75:
+                    elif choice < 0.6:
+                        obj = QuintuplePikesWithJumpPad(WIDTH)
+                    elif choice < 0.8:
                         obj = Block(WIDTH)
                     else:
                         obj = BouncingObstacle(WIDTH)
                 elif current_speed >= 9:
                     choice = random.random()
-                    if choice < 0.15:
+                    if choice < 0.1:
                         obj = Obstacle(WIDTH)
-                    elif choice < 0.3:
+                    elif choice < 0.2:
                         obj = Block(WIDTH)
-                    elif choice < 0.6:
+                    elif choice < 0.3:
+                        obj = JumpPad(WIDTH)
+                    elif choice < 0.5:
+                        obj = QuintuplePikesWithJumpPad(WIDTH)
+                    elif choice < 0.7:
                         obj = DoublePikes(WIDTH)
                     elif choice < 0.85:
                         obj = TriplePikes(WIDTH)
@@ -643,7 +649,7 @@ def best_ai_play():
     clock = pygame.time.Clock()
     
     agent = GeometryDashAI(state_size=8, action_size=2, load_model=True)
-    agent.epsilon = 0
+    agent.epsilon = 0  # Pas d'exploration, utilise seulement les connaissances acquises
     
     player = Player()
     game_objects = []
@@ -655,8 +661,8 @@ def best_ai_play():
     }
     
     obstacle_intervals = {
-        6: [800, 1400], 7: [900, 1600], 8: [1200, 1800],
-        9: [1300, 2000], 10: [1400, 2100], 11: [1500, 2200]
+        6: [800, 1400], 7: [850, 1450], 8: [900, 1500],
+        9: [950, 1550], 10: [1000, 1600], 11: [1000, 1600]
     }
     
     current_speed = INITIAL_SCROLL_SPEED
@@ -726,12 +732,12 @@ def best_ai_play():
         if game_objects:
             last_obstacle = game_objects[-1]
             
-            if isinstance(last_obstacle, Block):
-                last_obstacle_right = last_obstacle.rect.right
-            elif hasattr(last_obstacle, 'x') and hasattr(last_obstacle, 'width'):
+            if isinstance(last_obstacle, Obstacle):
                 last_obstacle_right = last_obstacle.x + last_obstacle.width
+            elif isinstance(last_obstacle, Block):
+                last_obstacle_right = last_obstacle.rect.right
             else:
-                last_obstacle_right = 0
+                last_obstacle_right = last_obstacle.x + last_obstacle.width
             
             if WIDTH - last_obstacle_right < min_distance:
                 can_spawn_obstacle = False
@@ -739,15 +745,15 @@ def best_ai_play():
         if can_spawn_obstacle and current_time - last_object > object_interval:
             obj = None
             
-        if current_speed == 6:
-            choice = random.random()
-            if choice < 0.35:
+            if current_speed == 6:
+                choice = random.random()
+                if choice < 0.35:
                     obj = Obstacle(WIDTH)
-            elif choice < 0.6:
+                elif choice < 0.6:
                     obj = JumpPad(WIDTH)
-            else:
+                else:
                     obj = Block(WIDTH)
-        elif current_speed == 7:
+            elif current_speed == 7:
                 choice = random.random()
                 if choice < 0.2:
                     obj = Obstacle(WIDTH)
@@ -759,30 +765,36 @@ def best_ai_play():
                     obj = DoublePikes(WIDTH)
                 else:
                     obj = Block(WIDTH)
-        elif current_speed == 8:
+            elif current_speed == 8:
                 choice = random.random()
                 if choice < 0.2:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.5:
+                elif choice < 0.4:
                     obj = DoublePikes(WIDTH)
-                elif choice < 0.75:
+                elif choice < 0.6:
+                    obj = QuintuplePikesWithJumpPad(WIDTH)
+                elif choice < 0.8:
                     obj = Block(WIDTH)
                 else:
                     obj = BouncingObstacle(WIDTH)
-        elif current_speed >= 9:
+            elif current_speed >= 9:
                 choice = random.random()
-                if choice < 0.15:
+                if choice < 0.1:
                     obj = Obstacle(WIDTH)
-                elif choice < 0.3:
+                elif choice < 0.2:
                     obj = Block(WIDTH)
-                elif choice < 0.6:
+                elif choice < 0.3:
+                    obj = JumpPad(WIDTH)
+                elif choice < 0.5:
+                    obj = QuintuplePikesWithJumpPad(WIDTH)
+                elif choice < 0.7:
                     obj = DoublePikes(WIDTH)
                 elif choice < 0.85:
                     obj = TriplePikes(WIDTH)
                 else:
                     obj = QuadruplePikes(WIDTH)
             
-        if obj:
+            if obj:
                 obj.set_speed(current_speed)
                 game_objects.append(obj)
                 
@@ -800,10 +812,38 @@ def best_ai_play():
         for obj in game_objects[:]:
             obj.update()
             
-            if check_collision(obj, player):
-                player.is_alive = False
-                running = False
-                break
+            # Gestion spécifique pour le JumpPad
+            if isinstance(obj, JumpPad):
+                if hasattr(obj, 'get_rect') and callable(getattr(obj, 'get_rect')):
+                    pad_rect = obj.get_rect()
+                    if (player.rect.bottom >= pad_rect.top and 
+                        player.rect.right > pad_rect.left and 
+                        player.rect.left < pad_rect.right):
+                        if hasattr(obj, 'activate') and callable(getattr(obj, 'activate')):
+                            obj.activate(player)
+            
+            # Gestion spécifique pour QuintuplePikesWithJumpPad
+            elif isinstance(obj, QuintuplePikesWithJumpPad):
+                if hasattr(obj, 'get_rects') and callable(getattr(obj, 'get_rects')):
+                    rects = obj.get_rects()
+                    if len(rects) > 0:
+                        jumppad_rect = rects[-1]
+                        if player.rect.colliderect(jumppad_rect):
+                            if hasattr(obj, 'activate_jump_pad') and callable(getattr(obj, 'activate_jump_pad')):
+                                obj.activate_jump_pad(player)
+                    
+                    for i in range(5, min(10, len(rects))):
+                        if player.rect.colliderect(rects[i]):
+                            player.is_alive = False
+                            print("Game Over! Collision avec un pic quintuple")
+                            running = False
+                            break
+            
+            else:
+                if check_collision(obj, player):
+                    player.is_alive = False
+                    running = False
+                    break
             
             if is_offscreen(obj):
                 objects_to_remove.append(obj)
@@ -873,7 +913,3 @@ def best_ai_play():
         agent.high_score = score
         agent.save_model()
         print(f"Nouveau meilleur score sauvegardé: {score}")
-
-
-if __name__ == "__main__":
-    ai_reinforcement_play()
