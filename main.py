@@ -40,7 +40,7 @@ LIGHT_GRAY = (220, 220, 220)
 DARK_GRAY = (100, 100, 100)
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Geometry Dash Clone")
+pygame.display.set_caption("Quadraleap")
 clock = pygame.time.Clock()
 
 def load_training_data():
@@ -921,7 +921,7 @@ def show_menu():
         screen.fill(WHITE)
         
         font_title = pygame.font.SysFont(None, 60)
-        title_text = font_title.render("Geometry Dash Clone", True, BLACK)
+        title_text = font_title.render("Quadraleap", True, BLACK)
         title_rect = title_text.get_rect(center=(WIDTH // 2, 100))
         screen.blit(title_text, title_rect)
         

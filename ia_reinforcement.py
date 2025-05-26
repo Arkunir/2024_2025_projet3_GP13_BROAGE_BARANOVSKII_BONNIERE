@@ -20,7 +20,7 @@ from klass import FivePikesWithOrb
 from klass import JumpPad
 from klass import QuintuplePikesWithJumpPad
 
-class GeometryDashAI:
+class QuadraLeapAI:
     def __init__(self, state_size=8, action_size=2, load_model=True):
         self.state_size = state_size
         self.action_size = action_size
@@ -127,7 +127,7 @@ class GeometryDashAI:
             reward += 0.4  # Récompense significative pour encourager l'utilisation des JumpPad
 
         # Pénalité/récompense pour les sauts inutiles/appropriés
-        if is_jumping and distance_to_obstacle > 200:
+        if is_jumping and distance_to_obstacle > 175:
             reward -= 0.1
         else:
             reward += 0.1  # Récompense pour ne pas sauter inutilement
@@ -294,10 +294,10 @@ def ai_reinforcement_play():
     GREEN = (0, 255, 0)
     
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Geometry Dash Clone - IA Renforcement")
+    pygame.display.set_caption("Quadraleap - IA Renforcement")
     clock = pygame.time.Clock()
     
-    agent = GeometryDashAI(state_size=8, action_size=2, load_model=True)
+    agent = QuadraLeapAI(state_size=8, action_size=2, load_model=True)
     agent.training_episodes += 1
     
     batch_size = 64
@@ -645,10 +645,10 @@ def best_ai_play():
     GREEN = (0, 255, 0)
     
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Geometry Dash Clone - Meilleure IA")
+    pygame.display.set_caption("Quadraleap - Meilleure IA")
     clock = pygame.time.Clock()
     
-    agent = GeometryDashAI(state_size=8, action_size=2, load_model=True)
+    agent = QuadraLeapAI(state_size=8, action_size=2, load_model=True)
     agent.epsilon = 0  # Pas d'exploration, utilise seulement les connaissances acquises
     
     player = Player()
