@@ -522,6 +522,10 @@ def ai_reinforcement_play():
                     game_objects.remove(obj)
                     score += 1
                     obstacles_passed += 1
+                
+                    if score >= 200:
+                        print(f"Score de 200 atteint! Arrêt de la simulation.")
+                        running = False
                     
                     if score < speed_threshold_random:
                         if score == speed_threshold_7 and current_speed < 7:
