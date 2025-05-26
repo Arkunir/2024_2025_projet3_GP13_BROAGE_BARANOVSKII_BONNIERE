@@ -5,7 +5,7 @@ Projet 3 de NSI, création d'une IA complétant une version abrogée de Geometry
 Ce projet est une version originale de Geometry Dash faite de nos propres moyens, un jeu de plateforme classique qui a pour but de sauter au-dessus de certains obstacles.  
 Le jeu est composé d'un mode infini avec un système de niveau de vitesse, au bout d'un certain nombre de points récupérés votre vitesse peut augmenter.  
 Le jeu est également composé d'une IA qui peut jouer au jeu.  
-
+Si vous voulez comprendre de manière plus ludique comment notre projet a été effectué vous pouvez aller sur notre [présentation](https://www.canva.com/design/DAGoiJNdM-s/KyQ4uFQdJfXTI8LwMPUDhA/edit?utm_content=DAGoiJNdM-s&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton).
 ### Description de l'IA:  
 
 L'IA est basée sur un algorithme de Deep Learning, plus précisément un réseau de neurones.  
@@ -76,8 +76,6 @@ Conditions d'exécution : Assurez-vous d'avoir **Python installé** sur votre ma
 - Une fois le code lancé, choisissez votre mode de jeu 'IA' ou 'Joueur'. Pour sauter au-dessus des obstacles, vous devez appuyer sur la touche 'Espace'.  
 
 ### Status:  
-Travail en cours:
-
 Travail achevé:
 - Implémentation de l'IA
 - corps du jeu
