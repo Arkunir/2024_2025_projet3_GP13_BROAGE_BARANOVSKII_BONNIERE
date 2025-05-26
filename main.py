@@ -48,6 +48,7 @@ def load_training_data():
     
     # 1. D'abord essayer de charger depuis les fichiers pkl disponibles
     model_files = [
+        'geometry_dash_ai_modelv6.pkl',
         'geometry_dash_ai_modelv5.pkl',
         'geometry_dash_ai_modelv4.pkl',
         'geometry_dash_ai_modelv3.pkl',
@@ -307,6 +308,7 @@ def show_training_graph():
     
     # Liste des fichiers de modèles disponibles
     model_files = [
+        'geometry_dash_ai_modelv6.pkl',
         'geometry_dash_ai_modelv5.pkl',
         'geometry_dash_ai_modelv4.pkl',
         'geometry_dash_ai_modelv3.pkl',

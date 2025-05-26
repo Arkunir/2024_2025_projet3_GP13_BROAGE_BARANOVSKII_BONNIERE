@@ -39,7 +39,7 @@ class GeometryDashAI:
         self.high_score = 0
         self.last_scores = deque(maxlen=100)
         
-        self.model_path = 'geometry_dash_ai_modelv5.pkl'
+        self.model_path = 'geometry_dash_ai_modelv6.pkl'
         if load_model and os.path.exists(self.model_path):
             self.load_model()
     
@@ -116,7 +116,7 @@ class GeometryDashAI:
         reward = 0
 
         # Petite récompense pour le défilement automatique (survie)
-        reward += 0.0005
+        reward += 0.002
 
         # Grosse récompense pour les obstacles franchis (sauf JumpPad)
         if obstacle_passed and obstacle_type != 9:  # 9 est le type pour JumpPad
@@ -131,7 +131,7 @@ class GeometryDashAI:
             reward -= 0.1
         else:
             reward += 0.1  # Récompense pour ne pas sauter inutilement
-
+ 
         # Récompense pour avoir la bonne hauteur face à un obstacle élevé
         if obstacle_height > 100 and player_y < ground_height - 100:
             reward += 0.01
@@ -302,7 +302,7 @@ def ai_reinforcement_play():
     
     batch_size = 64
     scores = []
-    episodes = 1500
+    episodes = 200
     
     min_obstacle_distances = {
         6: 150, 7: 175, 8: 500, 9: 250, 10: 275, 11: 300
