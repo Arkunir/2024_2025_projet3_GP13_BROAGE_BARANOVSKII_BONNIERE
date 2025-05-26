@@ -71,7 +71,7 @@ Conditions d'exécution : Assurez-vous d'avoir **Python installé** sur votre ma
 ### Utilisation:  
 - Installer : Python
 
-- Dans la console, faites les commandes suivantes : `pip install pygame` et `pip install numpy`
+- Dans la console, faites les commandes suivantes : `pip install pygame`, `pip install pickle`, `pip install matplotlib` et `pip install numpy`
 
 - Une fois le code lancé, choisissez votre mode de jeu 'IA' ou 'Joueur'. Pour sauter au-dessus des obstacles, vous devez appuyer sur la touche 'Espace'.  
 
